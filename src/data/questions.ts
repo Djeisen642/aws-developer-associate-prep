@@ -23,7 +23,7 @@ export const QUESTIONS: QuizQuestion[] = [
     id: 'dev-2',
     domain: 'development',
     question:
-      'You need a DynamoDB table to support queries by a secondary attribute that is different from the partition key, with its own separate throughput allocation and eventual or strong consistency options after table creation. What should you use?',
+      'You need a DynamoDB table to support queries by a secondary attribute that is different from the partition key, with its own separate throughput allocation, addable at any time after the table already exists. What should you use?',
     choices: [
       'Local Secondary Index (LSI)',
       'Global Secondary Index (GSI)',
@@ -32,7 +32,7 @@ export const QUESTIONS: QuizQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      'GSIs have their own partition/sort key and throughput, and can be added or removed after table creation. LSIs must be defined at table creation time and share the base table\'s throughput and partition key.',
+      'GSIs have their own partition/sort key and throughput, and can be added or removed after table creation — but they only support eventually consistent reads. LSIs must be defined at table creation time, share the base table\'s partition key and throughput, but support both eventually and strongly consistent reads.',
   },
   {
     id: 'dev-3',
@@ -203,7 +203,7 @@ export const QUESTIONS: QuizQuestion[] = [
     id: 'dev-16',
     domain: 'development',
     question:
-      'What is the purpose of a "dimension" in a CloudWatch custom metric, and how does it relate to Amazon SQS or S3 API calls being reduced?',
+      'What is the purpose of a "dimension" on a CloudWatch metric?',
     choices: [
       'Dimensions are unrelated to metrics; they configure IAM policies',
       'A dimension is a name/value pair that helps categorize and filter a metric (e.g., by environment or function name)',
