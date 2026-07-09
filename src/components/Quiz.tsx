@@ -16,6 +16,12 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
+function isCorrectAnswer(question: QuizQuestion, chosen: number[]): boolean {
+  if (chosen.length !== question.correctIndexes.length) return false;
+  const correctSet = new Set(question.correctIndexes);
+  return chosen.every((c) => correctSet.has(c));
+}
+
 const LENGTH_OPTIONS = [5, 10, 15, 20, 30];
 
 export default function Quiz({ questions, domains }: Props) {
@@ -23,7 +29,8 @@ export default function Quiz({ questions, domains }: Props) {
   const [length, setLength] = useState(10);
   const [deck, setDeck] = useState<QuizQuestion[] | null>(null);
   const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number[]>([]);
+  const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [wrongIds, setWrongIds] = useState<string[]>([]);
   const [confettiKey, setConfettiKey] = useState(0);
@@ -37,16 +44,15 @@ export default function Quiz({ questions, domains }: Props) {
     const pool = shuffle(available).slice(0, Math.min(length, available.length));
     setDeck(pool);
     setIndex(0);
-    setSelected(null);
+    setPicked([]);
+    setSubmitted(false);
     setScore(0);
     setWrongIds([]);
   }
 
-  function choose(choiceIndex: number) {
-    if (selected !== null || !deck) return;
-    const question = deck[index];
-    const correct = choiceIndex === question.correctIndex;
-    setSelected(choiceIndex);
+  function finalize(question: QuizQuestion, chosen: number[]) {
+    const correct = isCorrectAnswer(question, chosen);
+    setSubmitted(true);
     if (correct) {
       setScore((s) => s + 1);
       setConfettiKey((k) => k + 1);
@@ -56,9 +62,35 @@ export default function Quiz({ questions, domains }: Props) {
     recordQuizAnswer(question.id, correct);
   }
 
+  function toggleChoice(question: QuizQuestion, choiceIndex: number) {
+    if (submitted || !deck) return;
+    const needed = question.correctIndexes.length;
+
+    if (needed === 1) {
+      // Single-answer: clicking immediately locks in and reveals, as before.
+      const chosen = [choiceIndex];
+      setPicked(chosen);
+      finalize(question, chosen);
+      return;
+    }
+
+    // Multi-select: toggle, capped at the required count.
+    setPicked((prev) => {
+      if (prev.includes(choiceIndex)) return prev.filter((i) => i !== choiceIndex);
+      if (prev.length >= needed) return prev;
+      return [...prev, choiceIndex];
+    });
+  }
+
+  function submitMulti(question: QuizQuestion) {
+    if (submitted || picked.length !== question.correctIndexes.length) return;
+    finalize(question, picked);
+  }
+
   function next() {
     if (!deck) return;
-    setSelected(null);
+    setPicked([]);
+    setSubmitted(false);
     setIndex((i) => i + 1);
   }
 
@@ -72,7 +104,8 @@ export default function Quiz({ questions, domains }: Props) {
       <div className="card pop-in mx-auto max-w-xl p-6 sm:p-8">
         <h2 className="text-2xl font-extrabold text-white">Quiz Mode</h2>
         <p className="mt-1 text-sm text-slate-300">
-          Pick a domain and length, then go. Explanations follow every answer.
+          Pick a domain and length, then go. Some questions ask you to select more than one answer, just like the
+          real exam.
         </p>
 
         <div className="mt-6">
@@ -173,6 +206,10 @@ export default function Quiz({ questions, domains }: Props) {
   // --- Question screen -------------------------------------------------
   const question = deck[index];
   const domainInfo = domains.find((d) => d.id === question.domain);
+  const needed = question.correctIndexes.length;
+  const isMulti = needed > 1;
+  const correctSet = new Set(question.correctIndexes);
+  const correct = submitted && isCorrectAnswer(question, picked);
 
   return (
     <div className="pop-in mx-auto max-w-xl" key={question.id}>
@@ -192,50 +229,80 @@ export default function Quiz({ questions, domains }: Props) {
       </div>
 
       <div className="card relative overflow-hidden p-6 sm:p-8">
-        {confettiKey > 0 && selected !== null && selected === question.correctIndex && (
-          <Confetti key={confettiKey} />
+        {confettiKey > 0 && correct && <Confetti key={confettiKey} />}
+
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-lg font-bold text-white sm:text-xl">{question.question}</h3>
+        </div>
+        {isMulti && (
+          <p className="mt-2 text-xs font-bold uppercase tracking-wide text-[var(--color-aws-orange)]">
+            Select {needed} answers {!submitted && `(${picked.length}/${needed} chosen)`}
+          </p>
         )}
-        <h3 className="text-lg font-bold text-white sm:text-xl">{question.question}</h3>
 
         <div className="mt-5 flex flex-col gap-3">
           {question.choices.map((choice, i) => {
-            const isCorrect = i === question.correctIndex;
-            const isSelected = i === selected;
+            const isCorrectChoice = correctSet.has(i);
+            const isPicked = picked.includes(i);
+            const disableUnpicked = isMulti && !submitted && !isPicked && picked.length >= needed;
+
             let style = 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-100';
-            if (selected !== null) {
-              if (isCorrect) {
+            if (submitted) {
+              if (isCorrectChoice) {
                 style = 'border-[var(--color-correct)] bg-[var(--color-correct)]/15 text-white';
-              } else if (isSelected) {
+              } else if (isPicked) {
                 style = 'border-[var(--color-incorrect)] bg-[var(--color-incorrect)]/15 text-white';
               } else {
                 style = 'border-white/5 bg-white/5 text-slate-400';
               }
+            } else if (isPicked) {
+              style = 'border-[var(--color-aws-orange)] bg-[var(--color-aws-orange)]/10 text-white';
             }
+
             return (
               <button
                 key={i}
-                onClick={() => choose(i)}
-                disabled={selected !== null}
-                className={`rounded-xl border px-4 py-3 text-left text-sm font-medium transition sm:text-base ${style} ${
-                  isSelected && !isCorrect ? 'shake' : ''
-                }`}
+                onClick={() => toggleChoice(question, i)}
+                disabled={submitted || disableUnpicked}
+                className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition sm:text-base ${style} ${
+                  submitted && isPicked && !isCorrectChoice ? 'shake' : ''
+                } ${disableUnpicked ? 'cursor-not-allowed opacity-50' : ''}`}
               >
-                {choice}
+                {isMulti && (
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                      isPicked || (submitted && isCorrectChoice)
+                        ? 'border-current bg-current/20'
+                        : 'border-slate-500'
+                    }`}
+                  >
+                    {(isPicked || (submitted && isCorrectChoice)) && '✓'}
+                  </span>
+                )}
+                <span>{choice}</span>
               </button>
             );
           })}
         </div>
 
-        {selected !== null && (
+        {isMulti && !submitted && (
+          <button
+            onClick={() => submitMulti(question)}
+            disabled={picked.length !== needed}
+            className="btn-primary mt-5 w-full py-3 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Submit answer
+          </button>
+        )}
+
+        {submitted && (
           <div className="pop-in mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-200">
-            <p className="mb-1 font-bold text-white">
-              {selected === question.correctIndex ? '✅ Correct!' : '❌ Not quite.'}
-            </p>
+            <p className="mb-1 font-bold text-white">{correct ? '✅ Correct!' : '❌ Not quite.'}</p>
             <p>{question.explanation}</p>
           </div>
         )}
 
-        {selected !== null && (
+        {submitted && (
           <button onClick={next} className="btn-primary mt-5 w-full py-3">
             {index + 1 === deck.length ? 'See results' : 'Next question →'}
           </button>

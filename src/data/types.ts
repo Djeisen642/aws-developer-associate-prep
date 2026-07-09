@@ -49,7 +49,8 @@ export interface QuizQuestion {
   domain: Domain;
   question: string;
   choices: string[];
-  correctIndex: number;
+  /** Indexes of correct choices. Length 1 = single-answer; length 2+ = "Select N" multi-answer. */
+  correctIndexes: number[];
   explanation: string;
 }
 
