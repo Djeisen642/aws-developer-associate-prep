@@ -1,0 +1,58 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { CHEATSHEETS } from '../../data/cheatsheets';
+import { DOMAINS } from '../../data/types';
+
+export function getStaticPaths() {
+  return CHEATSHEETS.map((sheet) => ({
+    params: { slug: sheet.slug },
+    props: { sheet },
+  }));
+}
+
+const { sheet } = Astro.props;
+const domainInfo = DOMAINS.find((d) => d.id === sheet.domain)!;
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title={sheet.title} description={sheet.summary}>
+  <a href={`${base}cheatsheets/`} class="text-sm font-semibold text-slate-400 hover:text-white">&larr; All cheat sheets</a>
+
+  <div class="pop-in mt-4 mb-8">
+    <div class="flex items-center gap-3">
+      <span class="text-4xl">{sheet.icon}</span>
+      <div>
+        <h1 class="text-2xl font-black text-white sm:text-3xl">{sheet.title}</h1>
+        <span
+          class="mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold"
+          style={`background-color:${domainInfo.color}22; color:${domainInfo.color}`}
+        >
+          {domainInfo.label}
+        </span>
+      </div>
+    </div>
+    <p class="mt-3 text-slate-300">{sheet.summary}</p>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    {
+      sheet.sections.map((section) => (
+        <div class="card p-5">
+          <h2 class="font-bold text-white">{section.heading}</h2>
+          <ul class="mt-3 flex flex-col gap-2.5">
+            {section.points.map((point) => (
+              <li class="flex gap-2 text-sm text-slate-300">
+                <span class="mt-0.5 text-[var(--color-aws-orange)]">▸</span>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="mt-10 flex justify-center gap-3">
+    <a href={`${base}quiz/`} class="btn-primary px-6 py-3">Test yourself on this →</a>
+  </div>
+</Layout>

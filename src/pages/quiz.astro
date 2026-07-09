@@ -1,0 +1,14 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Quiz from '../components/Quiz.tsx';
+import { QUESTIONS } from '../data/questions';
+import { DOMAINS } from '../data/types';
+---
+
+<Layout title="Quiz Mode" description="Timed, scored AWS Developer Associate practice questions with instant explanations.">
+  <div class="pop-in mb-8 text-center">
+    <h1 class="text-3xl font-black text-white sm:text-4xl">Quiz Mode 🎮</h1>
+    <p class="mt-2 text-slate-300">Pick a domain, answer fast, learn from every explanation.</p>
+  </div>
+  <Quiz client:load questions={QUESTIONS} domains={DOMAINS} />
+</Layout>

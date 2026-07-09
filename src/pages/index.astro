@@ -1,0 +1,92 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProgressDashboard from '../components/ProgressDashboard.tsx';
+import { DOMAINS } from '../data/types';
+import { QUESTIONS } from '../data/questions';
+import { FLASHCARDS } from '../data/flashcards';
+
+const base = import.meta.env.BASE_URL;
+
+const features = [
+  {
+    href: `${base}quiz/`,
+    icon: '🎮',
+    title: 'Quiz Mode',
+    body: `${QUESTIONS.length} scored, multiple-choice questions across all four exam domains, with instant explanations.`,
+  },
+  {
+    href: `${base}flashcards/`,
+    icon: '🃏',
+    title: 'Flashcards',
+    body: `${FLASHCARDS.length} flip cards for fast recall of services, comparisons, and gotchas.`,
+  },
+  {
+    href: `${base}cheatsheets/`,
+    icon: '📋',
+    title: 'Cheat Sheets',
+    body: 'Bite-sized reference pages for the services that show up most on the exam.',
+  },
+];
+---
+
+<Layout title="Home">
+  <section class="pop-in text-center">
+    <p class="mb-3 inline-block rounded-full bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[var(--color-aws-orange)]">
+      DVA-C02 · Certified Developer – Associate
+    </p>
+    <h1 class="text-3xl font-black leading-tight text-white sm:text-5xl">
+      Prep for the AWS Dev Associate exam
+      <span class="text-[var(--color-aws-orange)]">without the boredom.</span>
+    </h1>
+    <p class="mx-auto mt-4 max-w-xl text-slate-300">
+      Quiz yourself, drill flashcards, and skim cheat sheets — all tracked locally so you always know your weakest
+      domain.
+    </p>
+    <div class="mt-6 flex flex-wrap justify-center gap-3">
+      <a href={`${base}quiz/`} class="btn-primary px-6 py-3 text-base">Start a quiz 🚀</a>
+      <a href={`${base}flashcards/`} class="rounded-xl bg-white/5 px-6 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
+        Flip flashcards 🃏
+      </a>
+    </div>
+  </section>
+
+  <section class="mt-12 grid gap-4 sm:grid-cols-3">
+    {
+      features.map((f) => (
+        <a href={f.href} class="card p-6 transition hover:-translate-y-1 hover:border-[var(--color-aws-orange)]/40">
+          <span class="text-3xl">{f.icon}</span>
+          <h2 class="mt-3 font-bold text-white">{f.title}</h2>
+          <p class="mt-1 text-sm text-slate-400">{f.body}</p>
+        </a>
+      ))
+    }
+  </section>
+
+  <section class="mt-14">
+    <h2 class="mb-6 text-center text-2xl font-extrabold text-white">Your progress</h2>
+    <ProgressDashboard client:load domains={DOMAINS} questions={QUESTIONS} totalFlashcards={FLASHCARDS.length} />
+  </section>
+
+  <section class="mt-14">
+    <h2 class="mb-6 text-center text-2xl font-extrabold text-white">Exam domains</h2>
+    <div class="grid gap-4 sm:grid-cols-2">
+      {
+        DOMAINS.map((d) => (
+          <div class="card p-5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white">
+                {d.icon} {d.label}
+              </span>
+              <span class="text-sm font-black" style={`color:${d.color}`}>
+                {d.weight}%
+              </span>
+            </div>
+            <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
+              <div class="h-full rounded-full" style={`width:${d.weight}%; background-color:${d.color}`} />
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+</Layout>
