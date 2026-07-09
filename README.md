@@ -11,6 +11,8 @@ A fun, fast way to study for the **AWS Certified Developer – Associate (DVA-C0
 
 ## Development
 
+Requires Node.js >= 22.12.0 (Astro 7's minimum supported version).
+
 ```bash
 npm install
 npm run dev       # start the dev server
