@@ -16,7 +16,7 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-const LENGTH_OPTIONS = [5, 10, 15, 20];
+const LENGTH_OPTIONS = [5, 10, 15, 20, 30];
 
 export default function Quiz({ questions, domains }: Props) {
   const [selectedDomain, setSelectedDomain] = useState<Domain | 'all'>('all');
