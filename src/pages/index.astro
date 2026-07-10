@@ -12,7 +12,7 @@ const features = [
     href: `${base}quiz/`,
     icon: '🎮',
     title: 'Quiz Mode',
-    body: `${QUESTIONS.length} scored questions across all four exam domains — including "Select TWO" multi-answer questions just like the real exam — with instant explanations.`,
+    body: `${QUESTIONS.length} scored questions across all four exam domains, plus a Smart Review mode that uses spaced repetition to resurface what you keep missing.`,
   },
   {
     href: `${base}flashcards/`,
@@ -39,13 +39,13 @@ const features = [
       <span class="text-[var(--color-aws-orange)]">without the boredom.</span>
     </h1>
     <p class="mx-auto mt-4 max-w-xl text-slate-300">
-      Quiz yourself, drill flashcards, and skim cheat sheets — all tracked locally so you always know your weakest
-      domain.
+      Quiz yourself with spaced repetition, drill flashcards, and skim cheat sheets — all tracked locally so you
+      always know your weakest domain.
     </p>
     <div class="mt-6 flex flex-wrap justify-center gap-3">
-      <a href={`${base}quiz/`} class="btn-primary px-6 py-3 text-base">Start a quiz 🚀</a>
-      <a href={`${base}flashcards/`} class="rounded-xl bg-white/5 px-6 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
-        Flip flashcards 🃏
+      <a href={`${base}quiz/?mode=smart`} class="btn-primary px-6 py-3 text-base">Smart Review 🧠</a>
+      <a href={`${base}quiz/`} class="rounded-xl bg-white/5 px-6 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
+        Start a quiz 🚀
       </a>
     </div>
   </section>
