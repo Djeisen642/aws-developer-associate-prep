@@ -4,10 +4,14 @@ import {
   loadProgress,
   computeStreak,
   computeDomainStats,
+  computeDueCount,
   resetProgress,
+  SMART_REVIEW_QUERY,
   type ProgressState,
   type DomainStats,
 } from '../utils/progress';
+
+const base = import.meta.env.BASE_URL;
 
 interface Props {
   domains: DomainInfo[];
@@ -44,6 +48,8 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
     .filter((d) => d.attempted > 0)
     .sort((a, b) => a.accuracy - b.accuracy)[0];
 
+  const dueCount = computeDueCount(state, questions);
+
   function handleReset() {
     if (window.confirm('Reset all quiz and flashcard progress? This cannot be undone.')) {
       setState(resetProgress());
@@ -61,6 +67,26 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
           value={cardsReviewed > 0 ? `${cardsKnown} / ${cardsReviewed}` : `0 / ${totalFlashcards}`}
         />
       </div>
+
+      <a
+        href={`${base}quiz/?${SMART_REVIEW_QUERY}`}
+        className="card pop-in mt-6 flex items-center justify-between gap-4 p-5 transition hover:border-[var(--color-aws-orange)]/40"
+      >
+        <div className="flex items-center gap-4">
+          <span className="text-3xl">🧠</span>
+          <div>
+            <p className="font-bold text-white">Smart Review</p>
+            <p className="text-sm text-slate-400">
+              {totalAttempted === 0
+                ? 'New here? This mixes all four domains using spaced repetition — the fastest way to build real recall.'
+                : dueCount > 0
+                  ? `${dueCount} question${dueCount === 1 ? '' : 's'} due for review right now.`
+                  : "You're all caught up — nothing due yet."}
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 text-[var(--color-aws-orange)]">→</span>
+      </a>
 
       {weakest && (
         <div className="card pop-in mt-6 flex items-center gap-4 p-5">

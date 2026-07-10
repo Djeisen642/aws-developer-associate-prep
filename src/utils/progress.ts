@@ -2,11 +2,26 @@ import type { Domain } from '../data/types';
 
 const STORAGE_KEY = 'aws-dva-progress-v1';
 
+/** Leitner-box spaced repetition: box 1 = review again soon, box 5 = well-known. */
+export const MAX_BOX = 5;
+const BOX_INTERVAL_DAYS: Record<number, number> = { 1: 0, 2: 1, 3: 3, 4: 7, 5: 16 };
+
+/** Single source of truth for the Smart Review deep-link, so it can't drift across files. */
+export const SMART_REVIEW_QUERY = 'mode=smart';
+
+export function isSmartReviewUrl(search: string): boolean {
+  return new URLSearchParams(search).get('mode') === 'smart';
+}
+
 export interface QuestionRecord {
   attempts: number;
   correct: number;
   lastCorrect: boolean;
   lastAt: string;
+  /** Leitner box (1-5). Missing on legacy records — treated as due now. */
+  box?: number;
+  /** ISO timestamp of when this question is next due for review. */
+  dueAt?: string;
 }
 
 export interface FlashcardRecord {
@@ -58,14 +73,26 @@ function touchSession(state: ProgressState) {
   }
 }
 
+function addDays(date: Date, days: number): Date {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
 export function recordQuizAnswer(questionId: string, correct: boolean): ProgressState {
   const state = loadProgress();
-  const existing = state.quiz[questionId] ?? { attempts: 0, correct: 0, lastCorrect: false, lastAt: '' };
+  const existing = state.quiz[questionId];
+  const prevBox = existing?.box ?? 1;
+  const nextBox = correct ? Math.min(prevBox + 1, MAX_BOX) : 1;
+  const now = new Date();
+
   state.quiz[questionId] = {
-    attempts: existing.attempts + 1,
-    correct: existing.correct + (correct ? 1 : 0),
+    attempts: (existing?.attempts ?? 0) + 1,
+    correct: (existing?.correct ?? 0) + (correct ? 1 : 0),
     lastCorrect: correct,
-    lastAt: new Date().toISOString(),
+    lastAt: now.toISOString(),
+    box: nextBox,
+    dueAt: addDays(now, BOX_INTERVAL_DAYS[nextBox]).toISOString(),
   };
   touchSession(state);
   saveProgress(state);
@@ -140,4 +167,53 @@ export function computeDomainStats(
       accuracy: attempted > 0 ? Math.round((correct / attempted) * 100) : 0,
     };
   });
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function dueRecords<T extends { id: string }>(state: ProgressState, questions: T[]): { q: T; box: number }[] {
+  const now = Date.now();
+  const due: { q: T; box: number }[] = [];
+  for (const q of questions) {
+    const record = state.quiz[q.id];
+    if (!record) {
+      due.push({ q, box: 1 }); // never seen — treat like a box-1 item, eager to include
+      continue;
+    }
+    const dueAt = record.dueAt ? Date.parse(record.dueAt) : 0;
+    if (dueAt <= now) {
+      due.push({ q, box: record.box ?? 1 });
+    }
+  }
+  return due;
+}
+
+/**
+ * Questions that are due for spaced-repetition review right now: never-attempted
+ * questions, plus previously-answered ones whose review interval has elapsed.
+ * Weaker/overdue items are prioritized (lower box first), interleaved within each
+ * priority tier via a shuffle so a review session isn't blocked by domain.
+ */
+export function getDueQuestions<T extends { id: string }>(state: ProgressState, questions: T[]): T[] {
+  return shuffle(dueRecords(state, questions))
+    .sort((a, b) => a.box - b.box) // Array.sort is stable (ES2019+), so the shuffle above still governs order within a box
+    .map((d) => d.q);
+}
+
+/** Cheap count-only version of getDueQuestions — no shuffling or array building. */
+export function computeDueCount(state: ProgressState, questions: { id: string }[]): number {
+  const now = Date.now();
+  let count = 0;
+  for (const q of questions) {
+    const record = state.quiz[q.id];
+    if (!record || (record.dueAt ? Date.parse(record.dueAt) : 0) <= now) count += 1;
+  }
+  return count;
 }

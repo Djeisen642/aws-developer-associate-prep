@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { QuizQuestion, Domain, DomainInfo } from '../data/types';
-import { recordQuizAnswer } from '../utils/progress';
+import { recordQuizAnswer, loadProgress, getDueQuestions, computeDueCount, isSmartReviewUrl } from '../utils/progress';
 
 interface Props {
   questions: QuizQuestion[];
@@ -23,11 +23,14 @@ function isCorrectAnswer(question: QuizQuestion, chosen: number[]): boolean {
 }
 
 const LENGTH_OPTIONS = [5, 10, 15, 20, 30];
+const SMART_BATCH_SIZE = 20;
 
 export default function Quiz({ questions, domains }: Props) {
   const [selectedDomain, setSelectedDomain] = useState<Domain | 'all'>('all');
   const [length, setLength] = useState(10);
   const [deck, setDeck] = useState<QuizQuestion[] | null>(null);
+  const [smartSession, setSmartSession] = useState(false);
+  const [dueCount, setDueCount] = useState(0);
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -40,14 +43,52 @@ export default function Quiz({ questions, domains }: Props) {
     [questions, selectedDomain],
   );
 
-  function start() {
-    const pool = shuffle(available).slice(0, Math.min(length, available.length));
+  // Only auto-launch Smart Review from a `?mode=smart` link once, on the very first
+  // mount — not every time the deck returns to null, or "Change settings" after a
+  // Smart Review session would just relaunch Smart Review again.
+  const autoLaunchedFromUrl = useRef(false);
+
+  // Refresh the "due for review" count whenever we're back on the setup screen
+  // (including on first mount), and auto-launch Smart Review if linked to directly.
+  useEffect(() => {
+    if (deck) return;
+    setDueCount(computeDueCount(loadProgress(), questions));
+    if (!autoLaunchedFromUrl.current && typeof window !== 'undefined' && isSmartReviewUrl(window.location.search)) {
+      autoLaunchedFromUrl.current = true;
+      startSmart();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deck]);
+
+  function launch(pool: QuizQuestion[], isSmart: boolean) {
     setDeck(pool);
+    setSmartSession(isSmart);
     setIndex(0);
     setPicked([]);
     setSubmitted(false);
     setScore(0);
     setWrongIds([]);
+  }
+
+  function start() {
+    launch(shuffle(available).slice(0, Math.min(length, available.length)), false);
+  }
+
+  function startSmart() {
+    const due = getDueQuestions(loadProgress(), questions);
+    setDueCount(due.length);
+    if (due.length === 0) {
+      // Nothing to review — stay on (or return to) the setup screen instead of
+      // launching an empty session, which would divide 0/0 on the results screen.
+      setDeck(null);
+      return;
+    }
+    launch(due.slice(0, SMART_BATCH_SIZE), true);
+  }
+
+  function playAgain() {
+    if (smartSession) startSmart();
+    else start();
   }
 
   function finalize(question: QuizQuestion, chosen: number[]) {
@@ -101,70 +142,93 @@ export default function Quiz({ questions, domains }: Props) {
   // --- Setup screen -------------------------------------------------
   if (!deck) {
     return (
-      <div className="card pop-in mx-auto max-w-xl p-6 sm:p-8">
-        <h2 className="text-2xl font-extrabold text-white">Quiz Mode</h2>
-        <p className="mt-1 text-sm text-slate-300">
-          Pick a domain and length, then go. Some questions ask you to select more than one answer, just like the
-          real exam.
-        </p>
+      <div className="mx-auto max-w-xl">
+        <div className="card pop-in border-[var(--color-aws-orange)]/30 p-6 sm:p-8">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🧠</span>
+            <h2 className="text-xl font-extrabold text-white">Smart Review</h2>
+          </div>
+          <p className="mt-1 text-sm text-slate-300">
+            Uses spaced repetition: questions you've missed (or haven't seen in a while) resurface, mixed across
+            domains, while ones you know well fade into the background.
+          </p>
+          <p className="mt-3 text-sm font-semibold text-[var(--color-aws-orange)]">
+            {dueCount > 0 ? `${dueCount} question${dueCount === 1 ? '' : 's'} due right now` : "You're all caught up"}
+          </p>
+          <button
+            onClick={startSmart}
+            disabled={dueCount === 0}
+            className="btn-primary mt-4 w-full py-3 text-base disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {dueCount > 0 ? `Start Smart Review (${Math.min(dueCount, SMART_BATCH_SIZE)}) 🧠` : 'Nothing due — nice! ✅'}
+          </button>
+        </div>
 
-        <div className="mt-6">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Domain</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedDomain('all')}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                selectedDomain === 'all'
-                  ? 'bg-[var(--color-aws-orange)] text-[var(--color-aws-navy)]'
-                  : 'bg-white/5 text-slate-200 hover:bg-white/10'
-              }`}
-            >
-              🌎 All domains
-            </button>
-            {domains.map((d) => (
+        <div className="card pop-in mt-6 p-6 sm:p-8">
+          <h2 className="text-xl font-extrabold text-white">Practice by domain</h2>
+          <p className="mt-1 text-sm text-slate-300">
+            Pick a domain and length, then go. Some questions ask you to select more than one answer, just like the
+            real exam.
+          </p>
+
+          <div className="mt-6">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Domain</p>
+            <div className="flex flex-wrap gap-2">
               <button
-                key={d.id}
-                onClick={() => setSelectedDomain(d.id)}
+                onClick={() => setSelectedDomain('all')}
                 className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  selectedDomain === d.id
+                  selectedDomain === 'all'
                     ? 'bg-[var(--color-aws-orange)] text-[var(--color-aws-navy)]'
                     : 'bg-white/5 text-slate-200 hover:bg-white/10'
                 }`}
               >
-                {d.icon} {d.shortLabel}
+                🌎 All domains
               </button>
-            ))}
+              {domains.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => setSelectedDomain(d.id)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    selectedDomain === d.id
+                      ? 'bg-[var(--color-aws-orange)] text-[var(--color-aws-navy)]'
+                      : 'bg-white/5 text-slate-200 hover:bg-white/10'
+                  }`}
+                >
+                  {d.icon} {d.shortLabel}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="mt-6">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">How many questions?</p>
-          <div className="flex flex-wrap gap-2">
-            {LENGTH_OPTIONS.map((n) => (
-              <button
-                key={n}
-                onClick={() => setLength(n)}
-                className={`h-10 w-14 rounded-lg text-sm font-bold transition ${
-                  length === n
-                    ? 'bg-[var(--color-aws-orange)] text-[var(--color-aws-navy)]'
-                    : 'bg-white/5 text-slate-200 hover:bg-white/10'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
+          <div className="mt-6">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">How many questions?</p>
+            <div className="flex flex-wrap gap-2">
+              {LENGTH_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setLength(n)}
+                  className={`h-10 w-14 rounded-lg text-sm font-bold transition ${
+                    length === n
+                      ? 'bg-[var(--color-aws-orange)] text-[var(--color-aws-navy)]'
+                      : 'bg-white/5 text-slate-200 hover:bg-white/10'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <p className="mt-4 text-xs text-slate-400">{available.length} questions available in this domain.</p>
+
+          <button
+            onClick={start}
+            disabled={available.length === 0}
+            className="btn-primary mt-6 w-full py-3 text-base disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Start quiz 🚀
+          </button>
         </div>
-
-        <p className="mt-4 text-xs text-slate-400">{available.length} questions available in this domain.</p>
-
-        <button
-          onClick={start}
-          disabled={available.length === 0}
-          className="btn-primary mt-6 w-full py-3 text-base disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Start quiz 🚀
-        </button>
       </div>
     );
   }
@@ -175,21 +239,31 @@ export default function Quiz({ questions, domains }: Props) {
     const verdict = pct >= 90 ? '🏆 Cert-ready!' : pct >= 70 ? '💪 Solid work' : pct >= 50 ? '📚 Keep grinding' : '🔁 Review time';
     return (
       <div className="card pop-in mx-auto max-w-xl p-6 text-center sm:p-8">
-        <p className="text-sm font-bold uppercase tracking-wide text-[var(--color-aws-orange)]">Quiz complete</p>
+        <p className="text-sm font-bold uppercase tracking-wide text-[var(--color-aws-orange)]">
+          {smartSession ? '🧠 Review complete' : 'Quiz complete'}
+        </p>
         <p className="mt-2 text-5xl font-black text-white">{pct}%</p>
         <p className="mt-1 text-slate-300">
           {score} / {deck.length} correct
         </p>
         <p className="mt-4 text-xl font-bold text-white">{verdict}</p>
 
-        {wrongIds.length > 0 && (
+        {smartSession ? (
           <p className="mt-4 text-sm text-slate-400">
-            Missed: {wrongIds.length} question{wrongIds.length === 1 ? '' : 's'}. Check the cheat sheets for a refresher.
+            {score > 0 && `${score} correct answer${score === 1 ? '' : 's'} just got pushed further out. `}
+            {wrongIds.length > 0 &&
+              `${wrongIds.length} miss${wrongIds.length === 1 ? '' : 'es'} will come back around soon.`}
           </p>
+        ) : (
+          wrongIds.length > 0 && (
+            <p className="mt-4 text-sm text-slate-400">
+              Missed: {wrongIds.length} question{wrongIds.length === 1 ? '' : 's'}. Check the cheat sheets for a refresher.
+            </p>
+          )
         )}
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <button onClick={start} className="btn-primary px-6 py-2.5">
+          <button onClick={playAgain} className="btn-primary px-6 py-2.5">
             Play again 🔁
           </button>
           <button
@@ -215,7 +289,7 @@ export default function Quiz({ questions, domains }: Props) {
     <div className="pop-in mx-auto max-w-xl" key={question.id}>
       <div className="mb-3 flex items-center justify-between text-sm text-slate-400">
         <span>
-          Question {index + 1} / {deck.length}
+          {smartSession && '🧠 '}Question {index + 1} / {deck.length}
         </span>
         <span className="font-semibold text-[var(--color-aws-orange)]">
           {domainInfo?.icon} {domainInfo?.shortLabel}
