@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { QuizQuestion, Domain, DomainInfo } from '../data/types';
-import { recordQuizAnswer, loadProgress, getDueQuestions } from '../utils/progress';
+import { recordQuizAnswer, loadProgress, getDueQuestions, computeDueCount, isSmartReviewUrl } from '../utils/progress';
 
 interface Props {
   questions: QuizQuestion[];
@@ -43,14 +43,19 @@ export default function Quiz({ questions, domains }: Props) {
     [questions, selectedDomain],
   );
 
+  // Only auto-launch Smart Review from a `?mode=smart` link once, on the very first
+  // mount — not every time the deck returns to null, or "Change settings" after a
+  // Smart Review session would just relaunch Smart Review again.
+  const autoLaunchedFromUrl = useRef(false);
+
   // Refresh the "due for review" count whenever we're back on the setup screen
   // (including on first mount), and auto-launch Smart Review if linked to directly.
   useEffect(() => {
     if (deck) return;
-    const due = getDueQuestions(loadProgress(), questions);
-    setDueCount(due.length);
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'smart' && due.length > 0) {
-      launch(due.slice(0, SMART_BATCH_SIZE), true);
+    setDueCount(computeDueCount(loadProgress(), questions));
+    if (!autoLaunchedFromUrl.current && typeof window !== 'undefined' && isSmartReviewUrl(window.location.search)) {
+      autoLaunchedFromUrl.current = true;
+      startSmart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deck]);
@@ -71,6 +76,13 @@ export default function Quiz({ questions, domains }: Props) {
 
   function startSmart() {
     const due = getDueQuestions(loadProgress(), questions);
+    setDueCount(due.length);
+    if (due.length === 0) {
+      // Nothing to review — stay on (or return to) the setup screen instead of
+      // launching an empty session, which would divide 0/0 on the results screen.
+      setDeck(null);
+      return;
+    }
     launch(due.slice(0, SMART_BATCH_SIZE), true);
   }
 

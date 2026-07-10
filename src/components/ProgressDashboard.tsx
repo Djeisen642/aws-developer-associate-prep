@@ -6,6 +6,7 @@ import {
   computeDomainStats,
   computeDueCount,
   resetProgress,
+  SMART_REVIEW_QUERY,
   type ProgressState,
   type DomainStats,
 } from '../utils/progress';
@@ -68,7 +69,7 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
       </div>
 
       <a
-        href={`${base}quiz/?mode=smart`}
+        href={`${base}quiz/?${SMART_REVIEW_QUERY}`}
         className="card pop-in mt-6 flex items-center justify-between gap-4 p-5 transition hover:border-[var(--color-aws-orange)]/40"
       >
         <div className="flex items-center gap-4">

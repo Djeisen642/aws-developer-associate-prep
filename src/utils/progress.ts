@@ -6,6 +6,13 @@ const STORAGE_KEY = 'aws-dva-progress-v1';
 export const MAX_BOX = 5;
 const BOX_INTERVAL_DAYS: Record<number, number> = { 1: 0, 2: 1, 3: 3, 4: 7, 5: 16 };
 
+/** Single source of truth for the Smart Review deep-link, so it can't drift across files. */
+export const SMART_REVIEW_QUERY = 'mode=smart';
+
+export function isSmartReviewUrl(search: string): boolean {
+  return new URLSearchParams(search).get('mode') === 'smart';
+}
+
 export interface QuestionRecord {
   attempts: number;
   correct: number;
@@ -171,16 +178,9 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-/**
- * Questions that are due for spaced-repetition review right now: never-attempted
- * questions, plus previously-answered ones whose review interval has elapsed.
- * Weaker/overdue items are prioritized, then interleaved (shuffled) within each
- * priority tier so a review session isn't blocked by domain.
- */
-export function getDueQuestions<T extends { id: string }>(state: ProgressState, questions: T[]): T[] {
+function dueRecords<T extends { id: string }>(state: ProgressState, questions: T[]): { q: T; box: number }[] {
   const now = Date.now();
   const due: { q: T; box: number }[] = [];
-
   for (const q of questions) {
     const record = state.quiz[q.id];
     if (!record) {
@@ -192,22 +192,28 @@ export function getDueQuestions<T extends { id: string }>(state: ProgressState, 
       due.push({ q, box: record.box ?? 1 });
     }
   }
-
-  const tiers = new Map<number, T[]>();
-  for (const { q, box } of due) {
-    const tier = tiers.get(box) ?? [];
-    tier.push(q);
-    tiers.set(box, tier);
-  }
-
-  const ordered: T[] = [];
-  for (let box = 1; box <= MAX_BOX; box++) {
-    const tier = tiers.get(box);
-    if (tier) ordered.push(...shuffle(tier));
-  }
-  return ordered;
+  return due;
 }
 
+/**
+ * Questions that are due for spaced-repetition review right now: never-attempted
+ * questions, plus previously-answered ones whose review interval has elapsed.
+ * Weaker/overdue items are prioritized (lower box first), interleaved within each
+ * priority tier via a shuffle so a review session isn't blocked by domain.
+ */
+export function getDueQuestions<T extends { id: string }>(state: ProgressState, questions: T[]): T[] {
+  return shuffle(dueRecords(state, questions))
+    .sort((a, b) => a.box - b.box) // Array.sort is stable (ES2019+), so the shuffle above still governs order within a box
+    .map((d) => d.q);
+}
+
+/** Cheap count-only version of getDueQuestions — no shuffling or array building. */
 export function computeDueCount(state: ProgressState, questions: { id: string }[]): number {
-  return getDueQuestions(state, questions).length;
+  const now = Date.now();
+  let count = 0;
+  for (const q of questions) {
+    const record = state.quiz[q.id];
+    if (!record || (record.dueAt ? Date.parse(record.dueAt) : 0) <= now) count += 1;
+  }
+  return count;
 }
