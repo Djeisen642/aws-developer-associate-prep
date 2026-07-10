@@ -10,6 +10,12 @@ import {
   type ProgressState,
   type DomainStats,
 } from '../utils/progress';
+import {
+  getNotificationState,
+  requestNotificationPermission,
+  maybeNotifyDue,
+  type NotificationState,
+} from '../utils/notifications';
 
 const base = import.meta.env.BASE_URL;
 
@@ -21,10 +27,23 @@ interface Props {
 
 export default function ProgressDashboard({ domains, questions, totalFlashcards }: Props) {
   const [state, setState] = useState<ProgressState | null>(null);
+  const [notifState, setNotifState] = useState<NotificationState>('unsupported');
 
   useEffect(() => {
     setState(loadProgress());
+    setNotifState(getNotificationState());
   }, []);
+
+  // If the user already granted permission, nudge them with a real OS notification
+  // (once per day, only while the app is actually open — there's no backend to push from).
+  useEffect(() => {
+    if (!state) return;
+    maybeNotifyDue(computeDueCount(state, questions));
+  }, [state, questions]);
+
+  async function handleEnableNotifications() {
+    setNotifState(await requestNotificationPermission());
+  }
 
   if (!state) {
     return <div className="mx-auto max-w-3xl text-center text-slate-400">Loading your progress…</div>;
@@ -87,6 +106,20 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
         </div>
         <span className="shrink-0 text-[var(--color-aws-orange)]">→</span>
       </a>
+
+      {notifState === 'default' && (
+        <button
+          onClick={handleEnableNotifications}
+          className="mt-2 flex items-center gap-1.5 px-1 text-xs font-medium text-slate-400 transition hover:text-slate-200"
+        >
+          🔔 Remind me when reviews are due
+        </button>
+      )}
+      {notifState === 'denied' && (
+        <p className="mt-2 px-1 text-xs text-slate-500">
+          Notifications are blocked — enable them in your browser settings if you'd like reminders.
+        </p>
+      )}
 
       {weakest && (
         <div className="card pop-in mt-6 flex items-center gap-4 p-5">
