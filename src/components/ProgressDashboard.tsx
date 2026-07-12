@@ -5,11 +5,27 @@ import {
   computeStreak,
   computeDomainStats,
   computeDueCount,
+  computeReadiness,
   resetProgress,
   SMART_REVIEW_QUERY,
   type ProgressState,
   type DomainStats,
 } from '../utils/progress';
+
+/** Below this many attempts, a domain's accuracy is too noisy to read as "mastered". */
+const LOW_SAMPLE_THRESHOLD = 5;
+
+function readinessColor(score: number): string {
+  if (score >= 80) return 'text-emerald-400';
+  if (score >= 60) return 'text-amber-400';
+  return 'text-rose-400';
+}
+
+function readinessCaveat(coverage: number): string {
+  if (coverage < 0.3) return "Early days — you've only tried a slice of the bank. Keep practicing before trusting this number.";
+  if (coverage < 0.6) return 'Decent sample so far — more practice will sharpen this estimate.';
+  return "Solid coverage — this is a reasonably reliable read on where you'd land.";
+}
 
 const base = import.meta.env.BASE_URL;
 
@@ -49,6 +65,7 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
     .sort((a, b) => a.accuracy - b.accuracy)[0];
 
   const dueCount = computeDueCount(state, questions);
+  const readiness = computeReadiness(domainStats, domains, questions.length, totalAttempted);
 
   function handleReset() {
     if (window.confirm('Reset all quiz and flashcard progress? This cannot be undone.')) {
@@ -67,6 +84,24 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
           value={cardsReviewed > 0 ? `${cardsKnown} / ${cardsReviewed}` : `0 / ${totalFlashcards}`}
         />
       </div>
+
+      {readiness && (
+        <div className="card pop-in mt-6 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Estimated exam readiness</p>
+              <p className={`mt-1 text-4xl font-black ${readinessColor(readiness.score)}`}>{readiness.score}%</p>
+              <p className="mt-1 text-xs text-slate-500">Weighted by each domain's share of the real exam blueprint.</p>
+            </div>
+            <div className="max-w-[14rem] text-right">
+              <p className="text-sm font-semibold text-slate-300">
+                {Math.round(readiness.coverage * 100)}% of the question bank practiced
+              </p>
+              <p className="mt-1 text-xs text-slate-500">{readinessCaveat(readiness.coverage)}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <a
         href={`${base}quiz/?${SMART_REVIEW_QUERY}`}
@@ -112,7 +147,16 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
                     {info.icon} {info.label}
                   </span>
                   <span className="text-slate-400">
-                    {d.attempted > 0 ? `${d.accuracy}% · ${d.attempted}/${d.total} attempted` : 'Not started'}
+                    {d.attempted > 0 ? (
+                      <>
+                        {d.accuracy}% · {d.attempted}/{d.total} attempted
+                        {d.attempted < LOW_SAMPLE_THRESHOLD && (
+                          <span className="text-amber-400"> · early signal</span>
+                        )}
+                      </>
+                    ) : (
+                      'Not started'
+                    )}
                   </span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">

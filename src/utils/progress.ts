@@ -1,4 +1,4 @@
-import type { Domain } from '../data/types';
+import type { Domain, DomainInfo } from '../data/types';
 
 const STORAGE_KEY = 'aws-dva-progress-v1';
 
@@ -167,6 +167,39 @@ export function computeDomainStats(
       accuracy: attempted > 0 ? Math.round((correct / attempted) * 100) : 0,
     };
   });
+}
+
+export interface Readiness {
+  /** Domain accuracy averaged and weighted by each domain's share of the real exam blueprint (0-100). */
+  score: number;
+  /** Fraction (0-1) of the entire question bank attempted so far — how much to trust `score`. */
+  coverage: number;
+}
+
+/**
+ * A simple average across domains misrepresents readiness because domains aren't
+ * equally weighted on the real exam (e.g. Development is 32%, Troubleshooting is 18%).
+ * This weights each attempted domain's accuracy by its exam blueprint share instead.
+ * Domains with zero attempts are excluded rather than counted as 0%, since "not started"
+ * and "started and struggling" should not look the same.
+ */
+export function computeReadiness(
+  domainStats: DomainStats[],
+  domains: DomainInfo[],
+  totalQuestions: number,
+  totalAttempted: number,
+): Readiness | null {
+  const attempted = domainStats.filter((d) => d.attempted > 0);
+  if (attempted.length === 0) return null;
+
+  const weightOf = new Map(domains.map((d) => [d.id, d.weight]));
+  const totalWeight = attempted.reduce((sum, d) => sum + (weightOf.get(d.domain) ?? 0), 0);
+  const weightedSum = attempted.reduce((sum, d) => sum + d.accuracy * (weightOf.get(d.domain) ?? 0), 0);
+
+  return {
+    score: totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0,
+    coverage: totalQuestions > 0 ? totalAttempted / totalQuestions : 0,
+  };
 }
 
 function shuffle<T>(arr: T[]): T[] {
