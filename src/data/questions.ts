@@ -1035,7 +1035,7 @@ export const QUESTIONS: QuizQuestion[] = [
     ],
     correctIndexes: [1],
     explanation:
-      'AssumeRoleWithWebIdentity exchanges an OIDC/web identity token (from providers like Google, Facebook, or any OIDC-compliant IdP) directly for temporary AWS credentials tied to an IAM role\'s trust policy — no backend or embedded long-lived credentials required. (Cognito Identity Pools use this same mechanism under the hood for federated identities.)',
+      "AssumeRoleWithWebIdentity exchanges an OIDC/web identity token (from providers like Google, Facebook, or any OIDC-compliant IdP) directly for temporary AWS credentials tied to an IAM role's trust policy — no backend or embedded long-lived credentials required. Cognito Identity Pools solve the same underlying problem (token-for-credentials federation) but through their own managed API rather than a direct AssumeRoleWithWebIdentity call.",
   },
   {
     id: 'sec-34',
@@ -1523,7 +1523,7 @@ export const QUESTIONS: QuizQuestion[] = [
     question:
       "A developer wants to test a REST API defined in a SAM template — invoking it over local HTTP exactly as API Gateway would route it to the backing Lambda functions — before deploying anything to AWS. What command should they run?",
     choices: [
-      'sam deploy --dry-run',
+      'sam deploy --guided',
       'sam local start-api',
       'sam validate',
       'sam local invoke',
@@ -1901,16 +1901,16 @@ export const QUESTIONS: QuizQuestion[] = [
     id: 'tr-25',
     domain: 'troubleshooting',
     question:
-      'A high-traffic API traced with X-Ray is generating so many traces that X-Ray costs and console clutter are becoming a problem, but the team still wants to reliably capture every request that results in an error. What should they adjust?',
+      'A high-traffic API traced with X-Ray is generating so many traces that X-Ray costs and console clutter are becoming a problem, but the team still wants a representative baseline of traces preserved for every endpoint rather than tracing almost nothing. What should they adjust?',
     choices: [
       'Disable X-Ray entirely and rely on CloudWatch Logs only',
-      "The X-Ray sampling rule, lowering the fixed rate for routine traffic while X-Ray's default behavior still always traces the first request per second and errors are still visible in the reduced sample",
+      "A custom X-Ray sampling rule that lowers the percentage traced for high-volume routine traffic, while keeping the reservoir (a fixed number of requests per second always traced) intact",
       'The Lambda function timeout',
       'The CloudWatch Logs retention period',
     ],
     correctIndexes: [1],
     explanation:
-      'X-Ray sampling rules control what fraction of requests get traced (beyond a guaranteed base rate) to control volume and cost. Tuning the rate down reduces routine trace volume while still capturing a representative sample; teams that need to guarantee every error is captured can pair this with custom sampling rules or annotate/force-sample error paths.',
+      "X-Ray sampling rules combine a per-second reservoir (a fixed number of requests always traced, regardless of outcome) with a percentage rate applied to requests beyond that reservoir. Lowering the percentage on a custom rule cuts trace volume/cost for high-traffic routes while the reservoir still guarantees a baseline of traces every second — note that the sampling decision is made when a trace starts, so sampling alone can't retroactively guarantee every erroring request is captured; that requires either a higher reservoir/rate or explicit instrumentation to force-sample specific paths.",
   },
   {
     id: 'tr-26',
