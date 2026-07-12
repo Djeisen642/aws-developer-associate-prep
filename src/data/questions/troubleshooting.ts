@@ -7,10 +7,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'A Lambda function intermittently fails with "Task timed out after 3.00 seconds". What is the most direct fix?',
     choices: [
-      'Increase the function\'s memory allocation only',
-      'Increase the function\'s configured timeout (and investigate/optimize slow dependencies)',
-      'Switch the function to a container image',
-      'Add a dead-letter queue',
+      "Increase the function's memory allocation only, which raises the timeout ceiling proportionally along with the extra CPU",
+      "Increase the function's configured timeout (and investigate/optimize slow dependencies)",
+      "Switch the function to a container image, which removes Lambda's maximum execution duration limit entirely",
+      'Add a dead-letter queue, which automatically extends the timeout for any invocation that would otherwise fail',
     ],
     correctIndexes: [1],
     explanation:
@@ -22,10 +22,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'You see many DynamoDB ProvisionedThroughputExceededException / throttling errors, and CloudWatch shows uneven consumption across partitions. What is the most likely root cause?',
     choices: [
-      'The table has too many GSIs',
+      "The table has too many GSIs, each of which silently caps the base table's total available throughput",
       'A hot partition, caused by a partition key with low cardinality or highly skewed access patterns',
-      'The AWS Region is experiencing an outage',
-      'The table is missing a sort key',
+      'The AWS Region is experiencing an outage, throttling every DynamoDB table in that Region uniformly',
+      'The table is missing a sort key, which DynamoDB requires in order to spread writes evenly across partitions',
     ],
     correctIndexes: [1],
     explanation:
@@ -47,10 +47,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'An API Gateway endpoint backed by Lambda returns HTTP 502 "Bad Gateway" errors. What is a common cause?',
     choices: [
-      'The client sent malformed JSON',
+      'The client sent malformed JSON, which API Gateway rejects with a 502 before the request ever reaches Lambda',
       'The Lambda function returned a response in an invalid format for the configured integration (e.g., missing required fields for proxy integration)',
-      'The API key is invalid',
-      'CORS is misconfigured',
+      'The API key is invalid, which API Gateway reports back to the client as a generic 502 rather than a 403',
+      'CORS is misconfigured, causing the browser to render the blocked preflight response as a 502 Bad Gateway',
     ],
     correctIndexes: [1],
     explanation:
@@ -72,10 +72,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'A Lambda function processing an SQS queue keeps failing on the same "poison pill" message, blocking the queue for other messages after retries are exhausted. What should be configured to isolate it?',
     choices: [
-      'A visibility timeout of 0',
+      'A visibility timeout of 0, so a failing message becomes visible to another consumer again instantly',
       'A dead-letter queue (DLQ) with a maxReceiveCount, so the message is moved aside after repeated failures',
-      'FIFO ordering',
-      'A larger Lambda memory setting',
+      'FIFO ordering, which stops a queue from redelivering the same failing message to the same consumer',
+      'A larger Lambda memory setting, giving the function enough headroom to eventually process the poison message successfully',
     ],
     correctIndexes: [1],
     explanation:
@@ -162,10 +162,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'A Lambda function\'s traffic pattern is spiky and unpredictable, and you are seeing occasional 429 throttling errors during bursts even though total daily invocations are low. What is a likely fix?',
     choices: [
-      'Reduce the function\'s memory allocation',
+      "Reduce the function's memory allocation, which frees up more of the account's shared concurrency pool for this function",
       'Increase reserved/account concurrency limits for the function, or smooth bursts with an SQS buffer in front of it',
-      'Switch the function\'s runtime language',
-      'Disable X-Ray tracing',
+      "Switch the function's runtime language, since interpreted languages have a lower per-invocation concurrency ceiling than compiled ones",
+      'Disable X-Ray tracing, which reserves a portion of concurrency capacity for trace collection on every invocation',
     ],
     correctIndexes: [1],
     explanation:
@@ -187,10 +187,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'In API Gateway, what is the difference between enabling "execution logs" and enabling "access logs" for a stage?',
     choices: [
-      'They are two names for the exact same feature',
-      'Execution logs capture detailed request/response processing steps (useful for debugging integration errors); access logs capture a customizable summary of each request (method, path, status, latency) for analytics',
-      'Access logs are only available for HTTP APIs, execution logs only for REST APIs, with no overlap',
-      'Execution logs are billed separately from CloudWatch entirely',
+      'They are two names for the exact same feature, just surfaced in different parts of the API Gateway console',
+      'Execution logs capture detailed request/response processing steps; access logs capture a customizable summary (method, path, status, latency) per request',
+      'Access logs are only available for HTTP APIs, execution logs only for REST APIs, with no overlap between the two',
+      'Execution logs are billed separately from CloudWatch entirely, through a dedicated API Gateway logging charge',
     ],
     correctIndexes: [1],
     explanation:
@@ -202,10 +202,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'DynamoDB\'s adaptive capacity feature helps with which specific problem?',
     choices: [
-      'It automatically compresses item sizes to save storage cost',
-      'It automatically and transparently helps absorb some non-uniform (hot key) traffic within a table\'s allocated throughput, without needing manual intervention',
-      'It removes the need for indexes entirely',
-      'It automatically archives old items to S3 Glacier',
+      'It automatically compresses item sizes to save storage cost, freeing up throughput for other access patterns',
+      "It automatically and transparently absorbs some hot-key traffic within a table's allocated throughput, without manual intervention",
+      'It removes the need for indexes entirely, since adaptive capacity routes queries around the base table',
+      'It automatically archives old, rarely-accessed items to S3 Glacier to reduce table storage costs',
     ],
     correctIndexes: [1],
     explanation:
@@ -217,10 +217,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the recommended first step when a CloudFormation stack update fails and rolls back, before trying the update again?',
     choices: [
-      'Immediately delete and recreate the entire stack',
-      'Check the stack\'s Events tab (or CloudTrail/CloudWatch Logs for the failing resource) to identify which resource failed and why',
-      'Increase the stack\'s timeout setting and retry blindly',
-      'Switch the template from YAML to JSON',
+      'Immediately delete and recreate the entire stack, since a failed update usually means the template itself is unusable',
+      "Check the stack's Events tab (or CloudTrail/CloudWatch Logs) to identify which resource failed and why",
+      "Increase the stack's timeout setting and retry blindly, since failures are almost always caused by a value set too low",
+      'Switch the template from YAML to JSON, since CloudFormation processes JSON templates more reliably than YAML',
     ],
     correctIndexes: [1],
     explanation:
@@ -232,10 +232,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'A Lambda function calls DynamoDB and an external HTTP API. X-Ray tracing is enabled on the function, but the generated traces only show the overall Lambda segment with no subsegments for the individual DynamoDB or HTTP calls. What is the most likely cause?',
     choices: [
-      "The Lambda function's timeout is set too low",
+      "The Lambda function's timeout is set too low, cutting off trace collection before downstream subsegments can be recorded",
       'The application code is not using the X-Ray SDK to instrument the AWS SDK client and outgoing HTTP calls',
-      'The X-Ray sampling rate is set to 100%',
-      'The DynamoDB table does not have Streams enabled',
+      'The X-Ray sampling rate is set to 100%, which paradoxically causes X-Ray to drop subsegments to control data volume',
+      'The DynamoDB table does not have Streams enabled, which X-Ray requires in order to trace calls made against that table',
     ],
     correctIndexes: [1],
     explanation:
@@ -247,10 +247,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       "A CloudWatch alarm monitoring a Lambda function's error count has been stuck in the INSUFFICIENT_DATA state for hours, even though the team can see in the Lambda console that the function has been invoked repeatedly during that time. What is a likely explanation?",
     choices: [
-      'The function has had no errors, and CloudWatch does not publish a data point for some metrics when the underlying event never occurs, leaving evaluation periods with no data',
-      'The Lambda function has been deleted',
-      'CloudWatch Alarms are only supported for EC2 metrics',
-      "The account has exceeded its CloudWatch Logs retention limit",
+      "The function has had zero errors, and CloudWatch doesn't publish a data point for some metrics when the underlying event never occurs",
+      'The Lambda function has been deleted, which suspends alarm evaluation until a new function with the same name is created',
+      'CloudWatch Alarms are only supported for EC2 metrics, not for Lambda function-level metrics like Errors',
+      'The account has exceeded its CloudWatch Logs retention limit, which pauses alarm evaluation for every metric until logs age out',
     ],
     correctIndexes: [0],
     explanation:
@@ -294,9 +294,9 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
       "One Lambda function in an account starts throttling with a burst of traffic, and unrelated Lambda functions in the same account start throttling too, even though none of them individually exceeds a high invocation rate. What is the most likely cause, and fix?",
     choices: [
       "The functions share the account's unreserved concurrency pool, which one noisy function exhausted; set reserved concurrency on the noisy function to cap its usage and protect the shared pool",
-      'The account has hit its S3 request limit',
-      "The functions' IAM roles have expired",
-      'CloudWatch Logs retention is misconfigured',
+      "The account has hit its S3 request limit, which Lambda enforces as a shared ceiling across every function that touches S3",
+      "The functions' IAM roles have expired, which AWS does automatically after a burst of concurrent role assumptions from one account",
+      'CloudWatch Logs retention is misconfigured, causing Lambda to throttle new invocations once the retention window fills up',
     ],
     correctIndexes: [0],
     explanation:
@@ -323,10 +323,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'A high-traffic API traced with X-Ray is generating so many traces that X-Ray costs and console clutter are becoming a problem, but the team still wants a representative baseline of traces preserved for every endpoint rather than tracing almost nothing. What should they adjust?',
     choices: [
-      'Disable X-Ray entirely and rely on CloudWatch Logs only',
+      'Disable X-Ray entirely and rely on CloudWatch Logs only, since logs capture the same latency breakdown that X-Ray traces do',
       "A custom X-Ray sampling rule that lowers the percentage traced for high-volume routine traffic, while keeping the reservoir (a fixed number of requests per second always traced) intact",
-      'The Lambda function timeout',
-      'The CloudWatch Logs retention period',
+      'The Lambda function timeout, since lowering it reduces how many requests are eligible to be traced in the first place',
+      "The CloudWatch Logs retention period, since X-Ray reads its sampling configuration from the log group's retention setting",
     ],
     correctIndexes: [1],
     explanation:
@@ -353,10 +353,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       "Multiple unrelated APIs hosted on the same API Gateway account start returning 429 Too Many Requests during a traffic spike, even though no single client is exceeding its own usage plan quota. What is the most likely cause?",
     choices: [
-      'A single Lambda function has been given reserved concurrency of zero',
-      "The account-level API Gateway steady-state/burst throttle limit (a regional, per-account default) has been exceeded across all APIs combined",
-      'The DynamoDB table backing the API is under-provisioned',
-      'CloudFront is caching stale responses',
+      'A single Lambda function has been given reserved concurrency of zero, throttling every API that happens to share its account',
+      'The account-level API Gateway throttle limit (a shared, regional default) has been exceeded across all APIs combined',
+      'The DynamoDB table backing the API is under-provisioned, which API Gateway reports to clients as a 429 instead of the true error',
+      "CloudFront is caching stale responses, serving a cached 429 to every client regardless of their actual request rate",
     ],
     correctIndexes: [1],
     explanation:
@@ -368,10 +368,10 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       'A Step Functions standard workflow execution appears to be stuck, with no visible errors in the state machine\'s recent CloudWatch metrics. What is the most direct way to see exactly which state it is currently in and how long it has been there?',
     choices: [
-      "Reading the state machine's IAM role policy",
+      "Reading the state machine's IAM role policy, which lists the current state as part of its last-updated timestamp",
       "Viewing the specific execution's event history and visual workflow graph in the Step Functions console",
-      'Checking S3 access logs',
-      'Increasing the Lambda function timeout',
+      'Checking S3 access logs, since Step Functions writes each state transition as an object write to a logging bucket',
+      'Increasing the Lambda function timeout, so the state currently running has more time to complete before appearing stuck',
     ],
     correctIndexes: [1],
     explanation:
@@ -383,13 +383,28 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     question:
       "After moving a Lambda function into a VPC to reach a private RDS instance, cold-start latency increased noticeably and the function occasionally fails to scale under burst traffic. What is the most likely explanation?",
     choices: [
-      "VPC-attached Lambda functions must provision elastic network interfaces (ENIs) in the configured subnets, and a subnet with too few free IP addresses can throttle scaling and add latency",
-      'RDS does not support connections from Lambda',
-      'VPC Lambda functions cannot use environment variables',
-      'The Lambda function\'s IAM role lost permissions when moved into the VPC',
+      'VPC-attached Lambda functions provision ENIs in the configured subnets, and too few free IP addresses there can throttle scaling and add latency',
+      'RDS does not support connections from Lambda functions running inside the same VPC as the database',
+      "VPC Lambda functions cannot use environment variables, since those are resolved through the function's public endpoint",
+      "The Lambda function's IAM role lost its permissions automatically the moment the function was attached to a VPC",
     ],
     correctIndexes: [0],
     explanation:
       "Lambda functions in a VPC use Hyperplane ENIs shared across functions/subnets, which reduced most of the historical ENI cold-start penalty, but scaling is still bounded by available IP addresses in the configured subnets — a small or nearly-full subnet can throttle concurrency growth and add latency. Sizing subnets with enough free IPs (and spreading across multiple subnets/AZs) is the standard fix.",
+  },
+  {
+    id: 'tr-30',
+    domain: 'troubleshooting',
+    question:
+      'An application wants to publish several custom, dimensioned CloudWatch metrics alongside its structured application logs, without making a separate PutMetricData API call for every metric — reducing API call volume and cost at high throughput. What should it use?',
+    choices: [
+      'The CloudWatch Embedded Metric Format (EMF), writing specially-structured JSON log lines that CloudWatch automatically extracts as metrics',
+      'Increasing the CloudWatch Logs retention period, which raises the number of custom metrics a single log group can emit per month',
+      'A CloudWatch Logs metric filter on every log line, extracting every dimensioned metric from a single pattern match',
+      'X-Ray annotations, which are automatically mirrored into CloudWatch as custom dimensioned metrics with no extra configuration',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "The Embedded Metric Format lets an application emit structured JSON log entries — which also serve as normal logs — containing a metrics directive; CloudWatch automatically extracts one or more dimensioned metrics from each entry, batched in with log writes instead of a separate PutMetricData call per metric. This is typically cheaper and lower-latency at high volume than individual API calls. A metric filter extracts a single metric via text pattern matching, and doesn't support cleanly extracting multiple dimensioned metrics from one structured log line the way EMF does.",
   },
 ];
