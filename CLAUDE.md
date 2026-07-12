@@ -1,5 +1,27 @@
 Guidance for Claude Code when working in this repo.
 
+## Project structure
+
+Astro 7 + React islands + Tailwind v4. Fully static — no backend, no API routes, no database, no environment variables/secrets. Every page in `src/pages/*.astro` is prerendered at build time; only the interactive pieces (`Quiz`, `Flashcards`, `ProgressDashboard`) are React components hydrated client-side (`client:load`) from within `.astro` pages.
+
+- **Deploys to GitHub Pages** on every push to `main` via `.github/workflows/deploy.yml`. There is **no CI on pull requests** — only this push-triggered deploy workflow, so a green PR doesn't mean anything ran; run `npm run build` yourself before calling work done. The site is served from a subpath (`base: '/aws-developer-associate-prep/'` in `astro.config.mjs`), so internal links must go through `import.meta.env.BASE_URL`, never a hardcoded leading `/`.
+- **All content is static TypeScript data**, imported at build time:
+  - `src/data/types.ts` — shared types, plus `DOMAINS`: the single source of truth for the four exam domains (id, label, exam weight %, color, icon). Anything needing domain metadata (dashboard bars, quiz filters, cheat-sheet badges) reads from here — don't hardcode domain labels/colors elsewhere.
+  - `src/data/questions/{development,security,deployment,troubleshooting}.ts` + `index.ts` — the quiz bank (see "Quiz question quality bar" below). Split per domain to keep files small and diffs/merges manageable; `index.ts` concatenates them into `QUESTIONS` and derives `QUESTIONS_BY_DOMAIN`. `id` prefixes (`dev-`, `sec-`, `dep-`, `tr-`) are numbered sequentially per file — check the last existing number before adding new ones.
+  - `src/data/flashcards.ts`, `src/data/cheatsheets.ts` — same "plain array of typed objects" pattern. Cheat sheets are statically routed by slug via `getStaticPaths()` in `src/pages/cheatsheets/[slug].astro`.
+- **Progress tracking is entirely client-side** (`src/utils/progress.ts`): everything lives under one `localStorage` key (`aws-dva-progress-v1`); nothing is ever sent to a server, and the app has no way to know a real user's actual state — don't assume otherwise. Smart Review uses a Leitner-box spaced-repetition scheme (`box` 1–5, `dueAt` timestamps). If you touch this file, keep `computeDueCount` (cheap, no array building — used for the dashboard badge) and `getDueQuestions` (full due list, shuffled — used for the actual session) in sync, since a mismatch between the two is a visible bug (badge says N due, session serves a different N).
+- `Quiz` supports single-answer and multi-answer ("Select N") questions via `correctIndexes.length`, and a `?mode=smart` deep link (`SMART_REVIEW_QUERY` / `isSmartReviewUrl` in `progress.ts`) that auto-launches Smart Review — but it does **not** read domain or question-count from the URL, only that one mode flag. Don't assume other query params do anything.
+
+### Commands
+
+```bash
+npm run dev      # dev server
+npm run build    # astro check (typecheck) + static build to dist/
+npm run preview  # preview the production build
+```
+
+No test suite exists. Validation for question-bank changes is `npx astro check`, a full `npm run build`, and an ad hoc throwaway script that imports `QUESTIONS` and checks structural invariants (choice-count bounds, no duplicate IDs/choices, `correctIndexes` in range, "Select TWO" wording matches answer count, no accidental length bias — see below). Write one each time rather than trusting the diff by eye.
+
 ## Quiz question quality bar
 
 Question data lives in `src/data/questions/{development,security,deployment,troubleshooting}.ts`, combined via `index.ts`. Each `QuizQuestion` has a `choices` array and `correctIndexes`.
