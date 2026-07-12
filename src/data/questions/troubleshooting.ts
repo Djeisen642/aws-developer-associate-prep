@@ -392,4 +392,19 @@ export const TROUBLESHOOTING_QUESTIONS: QuizQuestion[] = [
     explanation:
       "Lambda functions in a VPC use Hyperplane ENIs shared across functions/subnets, which reduced most of the historical ENI cold-start penalty, but scaling is still bounded by available IP addresses in the configured subnets — a small or nearly-full subnet can throttle concurrency growth and add latency. Sizing subnets with enough free IPs (and spreading across multiple subnets/AZs) is the standard fix.",
   },
+  {
+    id: 'tr-30',
+    domain: 'troubleshooting',
+    question:
+      'An application wants to publish several custom, dimensioned CloudWatch metrics alongside its structured application logs, without making a separate PutMetricData API call for every metric — reducing API call volume and cost at high throughput. What should it use?',
+    choices: [
+      'The CloudWatch Embedded Metric Format (EMF), writing specially-structured JSON log lines that CloudWatch automatically extracts as metrics',
+      'Increasing the CloudWatch Logs retention period',
+      'A CloudWatch Logs metric filter on every log line',
+      'X-Ray annotations',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "The Embedded Metric Format lets an application emit structured JSON log entries — which also serve as normal logs — containing a metrics directive; CloudWatch automatically extracts one or more dimensioned metrics from each entry, batched in with log writes instead of a separate PutMetricData call per metric. This is typically cheaper and lower-latency at high volume than individual API calls. A metric filter extracts a single metric via text pattern matching, and doesn't support cleanly extracting multiple dimensioned metrics from one structured log line the way EMF does.",
+  },
 ];

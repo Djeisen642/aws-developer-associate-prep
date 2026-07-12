@@ -477,4 +477,64 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     explanation:
       'Service Catalog lets administrators package approved CloudFormation templates as "products" in a catalog; end users can launch those products through a constrained self-service interface without needing direct IAM permissions to create the underlying resources, keeping provisioning governed and consistent.',
   },
+  {
+    id: 'dep-38',
+    domain: 'deployment',
+    question:
+      "An ECS task definition on Fargate needs two distinct sets of permissions: one for the ECS agent to pull the container image from a private ECR repo and write logs to CloudWatch, and a separate one for the application code inside the container to read from a specific S3 bucket. How should these be configured?",
+    choices: [
+      'One IAM role, used as the task role, covering both the ECS agent and the application code',
+      "The task execution role for the ECS agent (pulling the image, writing logs) and a separate task role for the application code's own AWS API calls (like S3 access)",
+      'The task role for the ECS agent and the task execution role for the application code — the reverse pairing',
+      'IAM roles are not used by Fargate tasks; permissions come from the underlying EC2 instance profile',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "The task execution role is used by the ECS/Fargate infrastructure itself (pulling the image, writing logs/secrets); the task role is assumed by the application code running inside the container for its own AWS API calls. Mixing them up either over-grants the infrastructure agent app-level permissions or leaves the app unable to call the AWS services it needs — and Fargate tasks have no underlying EC2 instance, so there's no instance profile to fall back on.",
+  },
+  {
+    id: 'dep-39',
+    domain: 'deployment',
+    question:
+      'A CI/CD pipeline needs to build a Lambda function packaged as a container image, push it to ECR, and update the Lambda function to use the new image on every commit. Which CodeBuild buildspec step is required here that would not be needed when deploying a .zip-based Lambda function?',
+    choices: [
+      'Running `docker build` and `docker push` to publish the image to ECR, then updating the function with the new image URI',
+      'Running `npm install`',
+      'Running unit tests',
+      'Uploading a build artifact to an S3 bucket',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Deploying a container-image Lambda function means CodeBuild must build the Docker image, push it to an ECR repository, and then point the function at that new image URI (e.g. via `aws lambda update-function-code --image-uri`) — a materially different artifact flow than a .zip-based Lambda deployment, which packages and uploads a .zip instead of building/pushing a container image.",
+  },
+  {
+    id: 'dep-40',
+    domain: 'deployment',
+    question:
+      'A team wants to release a new API Gateway stage configuration to a small percentage of production traffic first, monitor error rates separately from the current version, and promote to 100% only if it looks healthy — without standing up a second stage or changing the client-facing URL. What API Gateway feature fits this?',
+    choices: [
+      'A canary release deployment on the existing stage, with a configurable traffic percentage and the ability to promote or roll back',
+      'A completely separate stage with its own URL, splitting traffic manually with Route 53 weighted routing',
+      'A Lambda alias with weighted traffic shifting',
+      'CloudFront origin failover',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'API Gateway stages support canary release deployments directly: a configurable percentage of traffic on the same stage (same URL) is routed to the canary (new) deployment while the rest goes to the current one, with CloudWatch metrics reported separately for each — and a single "promote canary" action rolls it out to 100%, or you can roll back. No second stage, URL change, or external traffic-splitting tool is required.',
+  },
+  {
+    id: 'dep-41',
+    domain: 'deployment',
+    question:
+      'A team wants to toggle a new feature on or off for a percentage of production users instantly, without redeploying application code — with built-in validation to catch a bad configuration before it rolls out broadly, and automatic rollback if error-rate alarms fire during the rollout. Which service is purpose-built for this?',
+    choices: [
+      'Systems Manager Parameter Store, polled by the application every few minutes',
+      'AWS AppConfig, with a deployment strategy and CloudWatch alarm-based automatic rollback',
+      'Hardcoded environment variables, redeployed via CI/CD',
+      'A DynamoDB table, with the application polling a "features" table',
+    ],
+    correctIndexes: [1],
+    explanation:
+      'AWS AppConfig is purpose-built for dynamic application configuration and feature flags: it validates new configuration before deployment, rolls it out gradually according to a defined deployment strategy, and can automatically roll back if a monitoring alarm fires mid-rollout — capabilities Parameter Store, hardcoded environment variables, or a hand-rolled DynamoDB table don\'t provide out of the box.',
+  },
 ];

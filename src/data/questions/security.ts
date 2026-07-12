@@ -523,4 +523,49 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     explanation:
       "Security groups can reference another security group ID as the source/destination of a rule. Any instance that's a member of the application tier's security group is automatically covered, regardless of its IP — no manual updates needed as the Auto Scaling group scales in or out, unlike a CIDR-based rule.",
   },
+  {
+    id: 'sec-38',
+    domain: 'security',
+    question:
+      'An application in a private subnet (no NAT gateway) needs to call the Secrets Manager API without any traffic leaving the AWS network. Secrets Manager does not support gateway VPC endpoints. What should you create instead?',
+    choices: [
+      'A gateway VPC endpoint for Secrets Manager',
+      'An interface VPC endpoint (powered by AWS PrivateLink) for Secrets Manager, with a security group controlling access',
+      'A NAT gateway',
+      "A VPN connection to Secrets Manager's public endpoint",
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Most AWS services — including Secrets Manager, KMS, SNS, and SQS — are reached privately through interface VPC endpoints, which use AWS PrivateLink to place an elastic network interface with a private IP directly in your subnet; access is controlled by a security group. Gateway endpoints (route-table based, no security group) are only available for S3 and DynamoDB.",
+  },
+  {
+    id: 'sec-39',
+    domain: 'security',
+    question:
+      'A partner system outside your AWS account needs to verify the digital signature on documents your application signs, but must never be able to create new signatures or access any private key material. What KMS setup fits this?',
+    choices: [
+      'A symmetric KMS key used with GenerateDataKey',
+      "An asymmetric KMS key pair used for signing, where only the public key is exported/shared for verification while the private key stays in KMS",
+      'An IAM user with kms:Sign permission, shared with the partner',
+      'A customer-managed multi-Region symmetric key',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Asymmetric KMS keys support sign/verify operations: the private key material never leaves KMS (signing happens through the kms:Sign API), while the corresponding public key can be downloaded and distributed to anyone who needs to verify signatures — including systems outside AWS — without ever granting them the ability to sign new documents. Symmetric KMS keys are for encrypt/decrypt and data-key generation, not digital signatures.",
+  },
+  {
+    id: 'sec-40',
+    domain: 'security',
+    question:
+      'An organization using AWS Organizations wants to guarantee that no account in a particular OU can ever launch resources outside a specific set of allowed AWS Regions, regardless of what IAM permissions an admin inside that account grants. What should be applied?',
+    choices: [
+      'An IAM permissions boundary attached to every user',
+      'A Service Control Policy (SCP) attached to the OU, denying actions outside the allowed Regions',
+      'A resource-based policy attached to each resource',
+      'AWS Config rules with auto-remediation',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "SCPs are account/OU-wide guardrails in AWS Organizations that set the maximum available permissions for every principal in affected accounts. They don't grant permissions themselves, but a Deny in an SCP overrides any Allow from IAM policies within those accounts — including for admins — making SCPs the right tool for unbypassable, org-wide guardrails like Region restrictions. Permissions boundaries are scoped to individual IAM principals within a single account, not enforced across every account and admin org-wide.",
+  },
 ];

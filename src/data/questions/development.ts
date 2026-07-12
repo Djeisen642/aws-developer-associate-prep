@@ -568,4 +568,194 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     explanation:
       "A presigned URL is generated server-side using the backend's credentials but grants the bearer time-limited permission to perform one specific S3 operation (like PutObject) without exposing any actual AWS credentials to the client — ideal for letting an untrusted client upload directly to a private bucket.",
   },
+  {
+    id: 'dev-43',
+    domain: 'development',
+    question:
+      "A Lambda function connects directly to an RDS MySQL database. Under bursty traffic, the database frequently hits its maximum connections limit — even though the actual query workload is modest — causing connection errors. What should the team add between Lambda and RDS to fix this without changing the application's connection logic?",
+    choices: [
+      "Keep raising the RDS instance's max_connections parameter indefinitely",
+      'RDS Proxy, which pools and multiplexes a small set of database connections across many concurrent Lambda invocations',
+      'An RDS read replica',
+      'ElastiCache placed in front of RDS',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "RDS Proxy sits between the application and RDS/Aurora, pooling and sharing a small, stable set of established database connections across many concurrent client connections (like bursty Lambda invocations) — fixing connection exhaustion without any app-side connection-handling changes. Raising max_connections just delays the same problem and strains instance memory; a read replica scales reads, not connection handling; ElastiCache is an application-level cache, not a connection pooler.",
+  },
+  {
+    id: 'dev-44',
+    domain: 'development',
+    question:
+      'A mobile app needs a single API that lets clients query and mutate data pulled from multiple backend sources (DynamoDB, a Lambda function, and an HTTP endpoint) through one flexible schema, plus built-in real-time updates pushed to clients when data changes. Which service fits best?',
+    choices: ['An API Gateway REST API', 'AWS AppSync', 'Amazon Cognito', 'AWS Step Functions'],
+    correctIndexes: [1],
+    explanation:
+      'AppSync is a managed GraphQL API service: a single schema can resolve fields from multiple backend data sources (DynamoDB, Lambda, HTTP endpoints, and more), and it natively supports real-time subscriptions that push updates to connected clients over WebSockets. A REST API built on API Gateway has no equivalent schema-driven, multi-source query flexibility or built-in subscription mechanism.',
+  },
+  {
+    id: 'dev-45',
+    domain: 'development',
+    question:
+      'A front-end team wants to quickly stand up a full-stack web app — Git-connected CI/CD hosting for the frontend, plus provisioned backend building blocks like authentication, an API, and storage — through a guided CLI/console workflow, without hand-writing infrastructure-as-code templates. Which service is designed for this?',
+    choices: ['AWS Amplify', 'AWS CDK', 'AWS SAM', 'AWS Elastic Beanstalk'],
+    correctIndexes: [0],
+    explanation:
+      'Amplify provides an opinionated CLI/console workflow for provisioning common backend building blocks (Cognito auth, an AppSync/API Gateway API, S3 storage, and more) alongside Git-connected CI/CD hosting for the frontend — the fastest path to a scaffolded full-stack app. CDK and SAM are lower-level infrastructure-as-code tools where you still define every resource yourself; Elastic Beanstalk deploys a single application, not a scaffolded set of full-stack backend and frontend resources.',
+  },
+  {
+    id: 'dev-46',
+    domain: 'development',
+    question:
+      "A Lambda function bundles a large machine-learning library that puts it well past the 250 MB unzipped size limit for a .zip deployment package plus layers. The team wants to package and deploy the function as a container instead, up to 10 GB. What should they do?",
+    choices: [
+      'Package the function as a container image, push it to Amazon ECR, and point the Lambda function at that image URI',
+      'Split the function into ten smaller Lambda functions to stay under the size limit',
+      'Attach additional Lambda layers to work around the 250 MB limit',
+      'Move the code to an EC2 instance instead of Lambda',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Lambda supports packaging a function as a container image (up to 10 GB, stored in Amazon ECR) instead of a .zip file — the standard escape hatch once a function's code and dependencies exceed the .zip/layers size limit. The function still runs on Lambda's normal execution model (same triggers, concurrency, and scaling), just with a larger and more flexible packaging format.",
+  },
+  {
+    id: 'dev-47',
+    domain: 'development',
+    question:
+      'An application caches frequently-read data in ElastiCache and can tolerate results being briefly stale. It wants the simplest possible strategy: on a cache miss, read from the database and populate the cache for next time, so only data that has actually been requested ever gets cached. Which caching strategy is this?',
+    choices: ['Write-through caching', 'Lazy loading (cache-aside)', 'Write-behind caching', 'TTL-only caching with no read/write logic'],
+    correctIndexes: [1],
+    explanation:
+      "In lazy loading (cache-aside), the application checks the cache first; on a miss, it reads from the database and writes the result into the cache for next time. It's simple and the cache only ever holds data that was actually requested, but the first request for any key is always a miss and cached data can go stale until it expires or is invalidated. Write-through instead writes to the cache on every database write, keeping the cache fresh but adding write latency and potentially caching data that's never read.",
+  },
+  {
+    id: 'dev-48',
+    domain: 'development',
+    question:
+      "An application's RDS database is CPU-bound from a high volume of read queries while writes stay light, and the team separately wants automatic failover if the primary instance fails. Which combination correctly matches each need to the right RDS feature?",
+    choices: [
+      'One or more read replicas for read scaling, plus a Multi-AZ deployment for automatic failover — two separate, complementary features',
+      'A single Multi-AZ deployment alone handles both read scaling and automatic failover',
+      'Read replicas provide automatic failover, and Multi-AZ scales reads',
+      'ElastiCache alone replaces the need for both',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Read replicas are asynchronous, read-only copies used to offload read traffic from the primary. A classic (single-standby) Multi-AZ deployment maintains a synchronously-replicated standby purely for automatic failover during an outage — that standby isn't used to serve read traffic. The two features solve different problems and are commonly combined: replicas for read scaling, Multi-AZ for availability.",
+  },
+  {
+    id: 'dev-49',
+    domain: 'development',
+    question:
+      "An SNS topic publishes order events to three SQS queues subscribed to it, but each queue's consumer only cares about a subset of order types (for example, only \"high-value\" orders). The team wants each subscriber to receive only the messages relevant to it, without publishing to a separate topic per consumer. What should they configure?",
+    choices: [
+      'A subscription filter policy on each SQS subscription, matching on message attributes',
+      'A separate SNS topic per consumer',
+      'A Lambda function sitting between SNS and each queue to drop irrelevant messages',
+      'SQS message attributes, with no SNS-side configuration',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'SNS subscription filter policies let each subscription declare which messages it wants, based on message attributes (or the message body). SNS evaluates the policy at delivery time and only forwards matching messages to that subscriber — no router Lambda or per-consumer topic required.',
+  },
+  {
+    id: 'dev-50',
+    domain: 'development',
+    question:
+      'A company needs pub/sub fan-out where publish order and deduplication matter — for example, financial transaction events — fanning out to multiple SQS queues. What should they use?',
+    choices: [
+      'A standard SNS topic fanning out to standard SQS queues',
+      'A FIFO SNS topic fanning out to FIFO SQS queues',
+      'A standard SNS topic fanning out to FIFO SQS queues',
+      'EventBridge with an at-least-once delivery guarantee',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "FIFO SNS topics preserve strict publish order and support deduplication, but they can only fan out to FIFO SQS queues — not standard queues or other subscriber types — so pairing a FIFO topic with FIFO queues is required to carry those guarantees end-to-end. A standard SNS topic cannot subscribe a FIFO SQS queue at all.",
+  },
+  {
+    id: 'dev-51',
+    domain: 'development',
+    question:
+      "A Lambda function needs to read and write a shared, multi-gigabyte working directory that persists and stays visible across concurrent invocations and multiple functions — well beyond Lambda's ephemeral /tmp storage (configurable up to 10 GB, but private to a single execution environment). What should be mounted to the function?",
+    choices: [
+      "An Amazon EFS file system, mounted via an access point (requiring the function to be attached to EFS's VPC)",
+      'Amazon S3, mounted as a POSIX filesystem',
+      'A larger /tmp allocation with no upper bound',
+      'An Amazon EBS volume attached directly to the function',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Lambda supports mounting an Amazon EFS file system over NFS (via an EFS access point, which requires the function to be VPC-attached to reach the mount targets) for shared, persistent, multi-GB storage across concurrent invocations — unlike /tmp, which is ephemeral and private to one execution environment. EBS volumes can't be attached directly to Lambda, and S3 isn't natively mountable as a POSIX filesystem.",
+  },
+  {
+    id: 'dev-52',
+    domain: 'development',
+    question:
+      'A team runs a relational database with highly unpredictable, spiky traffic — idle for hours, then sudden bursts — and wants compute capacity to scale up and down automatically within seconds, without manually resizing instances or dropping connections during a scaling event. Which service fits best?',
+    choices: [
+      'A fixed-size RDS MySQL instance sized for peak load',
+      'Aurora Serverless v2',
+      'A DynamoDB table in on-demand capacity mode',
+      'A single large, manually-provisioned Aurora instance',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Aurora Serverless v2 scales database compute capacity automatically in fine-grained increments within seconds to match load, without the connection drops that could occur during Aurora Serverless v1 scaling events and without over-provisioning a fixed instance for peak load — a strong fit for spiky, hard-to-predict relational workloads. DynamoDB on-demand is serverless too, but it's non-relational — the right fit only if the app doesn't need SQL/relational features.",
+  },
+  {
+    id: 'dev-53',
+    domain: 'development',
+    question:
+      'An SQS-triggered Lambda function processes payment events. Because SQS delivery is at-least-once, the same message can occasionally be delivered and processed more than once — after a visibility timeout expiry, for example. The team wants to guarantee a given payment is never charged twice even on duplicate delivery. What should the function implement?',
+    choices: [
+      "Reduce the queue's visibility timeout to zero to avoid redelivery entirely",
+      'An idempotency check: record a unique key (like the payment ID) in a fast-lookup store such as DynamoDB, using a conditional write, before performing the charge — and skip processing if that key is already recorded',
+      "Increase the Lambda function's reserved concurrency",
+      'Switch the queue to FIFO, which alone makes the charge operation idempotent',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Because SQS guarantees at-least-once delivery, code with real side effects (like charging a card) needs to be idempotent regardless of queue type. The standard pattern is recording a unique idempotency key in a fast, strongly-consistent store before performing the side effect, and skipping if it's already there. FIFO queues add deduplication at publish time and preserve order, but that alone doesn't protect a consumer's own side effects against every possible redelivery scenario.",
+  },
+  {
+    id: 'dev-54',
+    domain: 'development',
+    question:
+      "A service calls a downstream dependency that has started failing and timing out under load. With no protection in place, the calling service keeps retrying and piling up threads/connections waiting on the failing dependency, risking a cascading failure across the whole system. Which resiliency pattern addresses this by temporarily stopping calls to a failing dependency and failing fast instead?",
+    choices: ['The circuit breaker pattern', 'Exponential backoff alone', 'The bulkhead pattern', 'Read-through caching'],
+    correctIndexes: [0],
+    explanation:
+      "A circuit breaker tracks failures to a dependency and, once a threshold is crossed, \"opens\" — failing fast (or falling back) without calling the dependency at all for a cooldown period, giving it room to recover and stopping the caller from piling up retries and resources. Exponential backoff spaces out retries but still calls the same failing dependency; the bulkhead pattern isolates resources (like separate connection pools) between dependencies so one failing dependency can't starve resources needed by others — a related but distinct pattern.",
+  },
+  {
+    id: 'dev-55',
+    domain: 'development',
+    question:
+      'A high-traffic site needs to inspect and rewrite HTTP headers on every CloudFront viewer request, with sub-millisecond execution and minimal added latency, using simple JavaScript logic that never needs to call another AWS service or reach the origin. Which edge compute option is the better fit, over Lambda@Edge?',
+    choices: [
+      'CloudFront Functions, built for lightweight, high-scale JavaScript logic at the viewer request/response events',
+      'Lambda@Edge, for its full Node.js/Python runtime and ability to call other AWS services',
+      'An origin-based Lambda function invoked synchronously per request',
+      'An API Gateway request validator',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "CloudFront Functions run natively inside CloudFront's edge locations (not as a separate Lambda invocation), execute in sub-millisecond time at very high scale, and are built for lightweight, JavaScript-only logic like header manipulation or URL rewrites at the viewer request/response events. Lambda@Edge supports all four CloudFront event types (including origin request/response), longer execution times, and full language runtimes with network/AWS SDK access — better when logic needs more compute or must reach other services, but with higher latency and cost than CloudFront Functions.",
+  },
+  {
+    id: 'dev-56',
+    domain: 'development',
+    question:
+      'A workflow processes millions of short-lived (under a few minutes) events per day and needs fast, cost-efficient orchestration rather than a guaranteed once-only execution and a fully durable, console-visualized audit trail for every run. Which Step Functions workflow type fits, and what is the key trade-off versus the alternative?',
+    choices: [
+      'Standard Workflows, because only Standard supports a Map state',
+      'Express Workflows, priced by number of executions/duration/memory and built for high-volume, short-duration workloads — trading Standard\'s exactly-once semantics and built-in execution history for at-least-once (or at-most-once) semantics and CloudWatch Logs-based history',
+      'Standard Workflows, because they support long-running executions',
+      'Express Workflows, because they support executions up to one year long',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Standard Workflows guarantee exactly-once execution, support runs up to one year long, and keep a visual, auditable execution history in the console — but are priced per state transition, which gets expensive at very high volume. Express Workflows are priced by number of executions, duration, and memory, and are built for high-volume, short-duration (up to 5 minutes) workloads — but offer only at-least-once or at-most-once execution semantics, and execution details live in CloudWatch Logs rather than the built-in console history Standard provides. Both workflow types support the same state types, including Map.",
+  },
 ];
