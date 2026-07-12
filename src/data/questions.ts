@@ -451,6 +451,126 @@ export const QUESTIONS: QuizQuestion[] = [
     explanation:
       "Kinesis Data Streams retains data for a configurable window (up to 365 days) and supports multiple independent consumers reading the same ordered stream at their own pace — SQS messages are removed once consumed by one consumer (fan-out requires SNS+SQS), and SNS doesn't retain or replay data.",
   },
+  {
+    id: 'dev-35',
+    domain: 'development',
+    question:
+      'An order-processing workflow must deduct inventory from one DynamoDB item and insert a new order item in a second table, with both writes succeeding or both failing together — a partial write would leave inventory incorrect. What should you use?',
+    choices: [
+      'Two separate PutItem calls wrapped in a try/catch block',
+      'TransactWriteItems to perform both writes as a single all-or-nothing transaction',
+      'BatchWriteItem, which guarantees atomicity across items',
+      'DynamoDB Streams to roll back the second write if the first fails',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "TransactWriteItems groups up to 100 write operations (across one or more tables) into a single all-or-nothing transaction — either every write succeeds or none do. BatchWriteItem is NOT atomic (individual item failures don't roll back the others); a try/catch around separate calls can't undo a write that already succeeded.",
+  },
+  {
+    id: 'dev-36',
+    domain: 'development',
+    question:
+      'A DynamoDB table stores session data that should be automatically deleted about 24 hours after creation, without the application running any cleanup jobs or consuming write capacity to delete expired items. What should you configure?',
+    choices: [
+      'A GSI sorted by creation timestamp, queried periodically to find and delete old items',
+      'Time to Live (TTL), setting an expiry timestamp attribute on each item',
+      'A DynamoDB Stream with a Lambda consumer that deletes old items nightly',
+      'S3 Lifecycle rules pointed at the table',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "DynamoDB TTL lets you designate an attribute holding an epoch timestamp; DynamoDB automatically deletes the item after that time, at no extra write-capacity cost and without any application-managed cleanup job. TTL deletes aren't instantaneous (typically within 48 hours) but require no polling or extra infrastructure.",
+  },
+  {
+    id: 'dev-37',
+    domain: 'development',
+    question:
+      'A SaaS company exposes a public REST API through API Gateway and wants to give each paying customer a distinct API key, enforce a different request-rate limit per customer tier, and track usage per key. What should you configure?',
+    choices: [
+      'A separate API Gateway deployment per customer',
+      'API Gateway usage plans with associated API keys, and require the key on each method',
+      'IAM resource policies scoped to each customer\'s IP range',
+      'A Lambda authorizer that hardcodes each customer\'s rate limit in code',
+    ],
+    correctIndexes: [1],
+    explanation:
+      'Usage plans let you define throttle (rate/burst) and quota limits, then associate one or more API keys with a plan; clients pass the key in a header, and API Gateway enforces the plan and reports usage per key — no need for separate deployments or custom rate-limiting code.',
+  },
+  {
+    id: 'dev-38',
+    domain: 'development',
+    question:
+      'A trading application needs the server to push live price updates to connected clients as they happen, and clients also occasionally send messages to the server on the same long-lived connection. Which API Gateway API type fits this?',
+    choices: [
+      'REST API with long polling',
+      'HTTP API with a 29-second timeout',
+      'WebSocket API',
+      'Edge-optimized REST API with CloudFront',
+    ],
+    correctIndexes: [2],
+    explanation:
+      'API Gateway WebSocket APIs maintain a persistent, full-duplex connection between client and server, so either side can push messages at any time — the right fit for real-time, bidirectional use cases like live price feeds or chat, unlike REST/HTTP APIs which are request/response only.',
+  },
+  {
+    id: 'dev-39',
+    domain: 'development',
+    question:
+      'Multiple producers send orders to a FIFO SQS queue. Orders for the same customer must be processed in the order they were sent, but orders for different customers can be processed in parallel without waiting on each other. What should you set on each message?',
+    choices: [
+      'A unique MessageDeduplicationId per message',
+      'The same MessageGroupId for all messages in the queue',
+      'A distinct MessageGroupId per customer (e.g., the customer ID)',
+      'DelaySeconds proportional to the customer ID',
+    ],
+    correctIndexes: [2],
+    explanation:
+      "FIFO queues guarantee order only within a message group. Setting MessageGroupId to the customer ID keeps each customer's orders strictly ordered while allowing SQS to deliver different customers' groups to consumers in parallel — using one shared group ID would force strict ordering across all customers, serializing everything.",
+  },
+  {
+    id: 'dev-40',
+    domain: 'development',
+    question:
+      'A Step Functions state machine receives an array of an unknown number of image files and must run the same resize-and-upload Lambda function once per file, independently, with a configurable ceiling on how many run concurrently. Which state type fits this?',
+    choices: [
+      'Parallel state, with one fixed branch per possible file',
+      'Map state, iterating the Lambda task over each array element',
+      'Choice state, routing based on array length',
+      'Pass state, forwarding the array unchanged to a single Lambda invocation',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "A Map state dynamically iterates a task over every item in an input array — exactly the fit for a variable-length list of files — and supports a MaxConcurrency setting to cap parallel executions. Parallel states define a fixed number of hardcoded branches, which doesn't work for an unknown, variable count of items.",
+  },
+  {
+    id: 'dev-41',
+    domain: 'development',
+    question:
+      "A Java Lambda function has unacceptably long cold-start latency for a latency-sensitive, low-traffic API, and the team doesn't want to pay for provisioned concurrency around the clock. What Lambda feature directly targets this?",
+    choices: [
+      'Lambda SnapStart, which caches an initialized execution environment snapshot and resumes from it',
+      'Increasing the function timeout',
+      'Switching the handler to use synchronous invocation',
+      'Enabling X-Ray tracing',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'Lambda SnapStart initializes the function once, then caches an encrypted snapshot of that initialized execution environment (memory and disk state); new invocations resume from the snapshot instead of running init from scratch, cutting cold-start latency for supported runtimes (like Java) without paying for always-on provisioned concurrency.',
+  },
+  {
+    id: 'dev-42',
+    domain: 'development',
+    question:
+      'A mobile app needs to let users upload a photo directly to a private S3 bucket without giving the app any long-lived AWS credentials, and the upload permission should expire a few minutes after being issued. What should the backend generate?',
+    choices: [
+      'An IAM user access key embedded in the app',
+      'A presigned URL for the S3 PutObject operation, with a short expiration',
+      'A public bucket policy allowing anonymous PutObject',
+      "The backend's own IAM role credentials, shared with the app",
+    ],
+    correctIndexes: [1],
+    explanation:
+      "A presigned URL is generated server-side using the backend's credentials but grants the bearer time-limited permission to perform one specific S3 operation (like PutObject) without exposing any actual AWS credentials to the client — ideal for letting an untrusted client upload directly to a private bucket.",
+  },
 
   // ---------------------------------------------------------------------
   // Security
@@ -857,6 +977,126 @@ export const QUESTIONS: QuizQuestion[] = [
     explanation:
       'DynamoDB (like S3) supports gateway VPC endpoints, which add a route table entry allowing private, in-VPC traffic to reach the service with no internet gateway or NAT required — the missing gateway endpoint and route is the likely cause of the timeouts.',
   },
+  {
+    id: 'sec-30',
+    domain: 'security',
+    question:
+      'A financial services company must store audit log objects in S3 such that no one — including the account root user or an admin with full IAM permissions — can delete or overwrite them until a fixed retention date has passed. What should you enable?',
+    choices: [
+      'S3 Versioning alone',
+      'S3 Object Lock in Compliance mode, with a retention period set on the objects',
+      'A bucket policy that denies s3:DeleteObject to all principals',
+      'MFA Delete on the bucket',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "S3 Object Lock in Compliance mode enforces WORM (write once, read many) storage — no user, including the root account, can delete or overwrite a locked object version until its retention period expires. A Deny bucket policy can still be edited or removed by an admin, and MFA Delete only adds a confirmation step, it doesn't block deletion outright.",
+  },
+  {
+    id: 'sec-31',
+    domain: 'security',
+    question:
+      'A CloudFront distribution serves private content from an S3 bucket. The security team wants to guarantee that the S3 objects can only ever be reached through CloudFront, never directly via the bucket\'s S3 URL, without managing expiring credentials. What should you configure?',
+    choices: [
+      'Make the S3 bucket fully public and rely on obscurity of the URL',
+      'Origin Access Control (OAC) on the distribution, paired with a bucket policy that only allows that CloudFront distribution',
+      'A Lambda@Edge function that checks the Referer header',
+      'S3 Transfer Acceleration',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Origin Access Control (OAC) lets CloudFront sign requests to the S3 origin with its own identity; the bucket policy then allows only that specific distribution, keeping the bucket itself private and blocking any direct S3 URL access. This is the modern replacement for the older Origin Access Identity (OAI) approach.",
+  },
+  {
+    id: 'sec-32',
+    domain: 'security',
+    question:
+      'A public-facing Application Load Balancer regularly receives SQL injection and cross-site scripting attempts embedded in request parameters. Which AWS service is purpose-built to inspect and block these patterns at the edge, before they reach the application?',
+    choices: [
+      'AWS Shield Standard',
+      'AWS WAF, with managed rule groups for common web exploits',
+      'A network ACL blocking the source IP ranges',
+      'Amazon Inspector',
+    ],
+    correctIndexes: [1],
+    explanation:
+      'AWS WAF inspects HTTP(S) requests against rules (including AWS Managed Rules like the Core Rule Set and SQLi rule group) and can block requests matching known exploit patterns, attached directly to the ALB, CloudFront, or API Gateway. Shield protects against network/transport-layer DDoS, not application-layer payload inspection; Inspector scans workloads for vulnerabilities, it doesn\'t filter live traffic.',
+  },
+  {
+    id: 'sec-33',
+    domain: 'security',
+    question:
+      "A mobile game authenticates users through a third-party OpenID Connect provider (not Cognito) and needs to hand those users short-lived AWS credentials scoped to a specific IAM role, without running any backend server. What STS API enables this directly?",
+    choices: [
+      'sts:GetSessionToken',
+      'sts:AssumeRoleWithWebIdentity',
+      'sts:GetFederationToken',
+      'sts:AssumeRole using a long-lived IAM user access key embedded in the app',
+    ],
+    correctIndexes: [1],
+    explanation:
+      'AssumeRoleWithWebIdentity exchanges an OIDC/web identity token (from providers like Google, Facebook, or any OIDC-compliant IdP) directly for temporary AWS credentials tied to an IAM role\'s trust policy — no backend or embedded long-lived credentials required. (Cognito Identity Pools use this same mechanism under the hood for federated identities.)',
+  },
+  {
+    id: 'sec-34',
+    domain: 'security',
+    question:
+      'A company wants every request to its S3 bucket to be rejected if it arrives over plain HTTP instead of HTTPS, regardless of which IAM principal is making the request. What should the bucket policy use?',
+    choices: [
+      'A Deny statement with condition key aws:SecureTransport equals false',
+      'An Allow statement scoped only to HTTPS IP ranges',
+      'S3 default encryption (SSE-S3)',
+      'A CORS configuration restricting allowed origins',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'A bucket policy Deny statement with the condition "aws:SecureTransport": "false" blocks any request (from any principal) that did not arrive over TLS — the standard way to enforce HTTPS-only access to S3. Default encryption protects data at rest, not the transport used to reach the bucket.',
+  },
+  {
+    id: 'sec-35',
+    domain: 'security',
+    question:
+      'A security team wants continuous, automated detection of suspicious account activity — such as API calls from known-malicious IPs, unusual credential usage, or EC2 instances communicating with crypto-mining endpoints — without manually writing detection rules. Which service should they enable?',
+    choices: [
+      'Amazon GuardDuty',
+      'AWS Config',
+      'IAM Access Analyzer',
+      'AWS Trusted Advisor',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'GuardDuty is a managed threat-detection service that continuously analyzes CloudTrail, VPC Flow Logs, and DNS logs against threat intelligence and machine learning models to surface findings like compromised credentials or malicious network activity — no rule-writing required. Access Analyzer specifically finds unintended external/cross-account resource access, not general threat activity.',
+  },
+  {
+    id: 'sec-36',
+    domain: 'security',
+    question:
+      "Company A stores a database credential in AWS Secrets Manager and needs to let a specific IAM role in Company B's separate AWS account retrieve that one secret's value, without creating any IAM users for Company B or copying the secret into their account.",
+    choices: [
+      'Attach a resource policy to the secret allowing Company B\'s specific role ARN to call secretsmanager:GetSecretValue',
+      "Email the secret value directly to Company B",
+      'Make the secret publicly readable',
+      "Create an IAM user in Company A's account and share its access keys with Company B",
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Secrets Manager secrets support resource-based policies, just like S3 buckets or KMS keys. Attaching a policy that grants Company B's role ARN secretsmanager:GetSecretValue enables direct, least-privilege cross-account access to that one secret without creating IAM users, copying the secret, or any manual credential sharing.",
+  },
+  {
+    id: 'sec-37',
+    domain: 'security',
+    question:
+      'An application tier of EC2 instances (in an Auto Scaling group, with IPs that change constantly) needs to reach a database tier on port 5432, and the database security group rule should keep working automatically as instances scale in and out. What should the database security group\'s inbound rule reference?',
+    choices: [
+      "The application tier's current list of instance IPs, updated manually as it scales",
+      "The application tier's security group ID as the source, instead of a CIDR block",
+      '0.0.0.0/0 to avoid maintaining the rule',
+      "The application tier's VPC ID as the source",
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Security groups can reference another security group ID as the source/destination of a rule. Any instance that's a member of the application tier's security group is automatically covered, regardless of its IP — no manual updates needed as the Auto Scaling group scales in or out, unlike a CIDR-based rule.",
+  },
 
   // ---------------------------------------------------------------------
   // Deployment
@@ -1217,6 +1457,126 @@ export const QUESTIONS: QuizQuestion[] = [
     explanation:
       'ECS blue/green deployments via CodeDeploy use two target groups to shift traffic gradually, and CodeDeploy deployment groups support CloudWatch alarms as automatic rollback triggers — together they give a zero-downtime rollout with automatic rollback on error-rate spikes.',
   },
+  {
+    id: 'dep-30',
+    domain: 'deployment',
+    question:
+      'A team wants every container image pushed to their Amazon ECR repository to be automatically scanned for known OS and package vulnerabilities, with no separate tool to run manually. What should they enable?',
+    choices: [
+      'Amazon Inspector or ECR basic scanning, configured for scan-on-push on the repository',
+      'S3 Object Lock on the repository',
+      'CloudTrail data events for the repository',
+      'A CodeBuild step that runs `docker history`',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'ECR supports scan-on-push (basic scanning, or enhanced scanning powered by Amazon Inspector), which automatically scans each pushed image layer for known CVEs and surfaces findings in the console/API — no manual tool invocation required.',
+  },
+  {
+    id: 'dep-31',
+    domain: 'deployment',
+    question:
+      "A CloudFormation template needs to provision a resource type that CloudFormation doesn't natively support (a third-party SaaS resource, reachable only via a custom API). What CloudFormation feature allows this?",
+    choices: [
+      'A CloudFormation macro that transforms the entire template',
+      'A custom resource, backed by a Lambda function that implements the create/update/delete logic',
+      'A nested stack pointing at the third-party API',
+      'A stack policy',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Custom resources let a template include a resource type CloudFormation doesn't natively understand: CloudFormation invokes a backing Lambda function (or SNS topic) on create/update/delete, and the function implements whatever provisioning logic is needed against the external system, then signals success or failure back to CloudFormation.",
+  },
+  {
+    id: 'dep-32',
+    domain: 'deployment',
+    question:
+      'A team suspects that someone manually changed an EC2 instance\'s security group directly in the console after it was provisioned by CloudFormation, so the live resource no longer matches the template. What CloudFormation feature detects this kind of manual, out-of-band change?',
+    choices: [
+      'Change sets',
+      'Drift detection',
+      'Stack policies',
+      'Termination protection',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Drift detection compares a stack's actual resource configuration against what the template defines and reports any resource whose real-world state has diverged due to manual, out-of-band changes. Change sets preview the effect of an upcoming template update — a different concept from detecting drift that already happened.",
+  },
+  {
+    id: 'dep-33',
+    domain: 'deployment',
+    question:
+      "An Elastic Beanstalk web application must handle a deployment without ever reducing the number of instances serving live traffic, and it's acceptable for the deployment to take longer as long as capacity never drops. Which deployment policy fits, without the cost of doubling the fleet like Immutable or Blue/Green would?",
+    choices: [
+      'All at once',
+      'Rolling',
+      'Rolling with additional batch',
+      'Blue/Green',
+    ],
+    correctIndexes: [2],
+    explanation:
+      "\"Rolling with additional batch\" launches one extra batch of new instances first, then performs the rolling update in batches on the existing fleet — so total capacity never drops below 100% during the deployment, without provisioning a full second environment the way Blue/Green or Immutable do. Plain Rolling temporarily reduces capacity by one batch while it updates instances in place.",
+  },
+  {
+    id: 'dep-34',
+    domain: 'deployment',
+    question:
+      "A developer wants to test a REST API defined in a SAM template — invoking it over local HTTP exactly as API Gateway would route it to the backing Lambda functions — before deploying anything to AWS. What command should they run?",
+    choices: [
+      'sam deploy --dry-run',
+      'sam local start-api',
+      'sam validate',
+      'sam local invoke',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "`sam local start-api` spins up a local HTTP server that emulates API Gateway's routing based on the SAM template, invoking the correct local Lambda function (in a Docker container) for each path/method — useful for full request/response testing. `sam local invoke` runs a single function directly with a sample event, without simulating API Gateway routing.",
+  },
+  {
+    id: 'dep-35',
+    domain: 'deployment',
+    question:
+      'A CodeBuild project reinstalls the same large set of npm dependencies from scratch on every single build, adding several minutes to each run. What is the most direct way to speed this up?',
+    choices: [
+      'Switch to a larger CodeBuild compute type',
+      'Configure a CodeBuild cache (local or S3) for the dependency directory (e.g., node_modules)',
+      'Reduce the number of CodePipeline stages',
+      'Disable CodeBuild logs',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "CodeBuild supports caching build output directories (like node_modules) either locally on the build host or in S3, so unchanged dependencies don't need to be re-downloaded/reinstalled on every build — directly cutting build time. A bigger compute type speeds up CPU-bound work, not redundant network installs.",
+  },
+  {
+    id: 'dep-36',
+    domain: 'deployment',
+    question:
+      'A CodeDeploy deployment to an EC2 Auto Scaling group uses the blue/green deployment type. What happens to the original ("blue") instances after traffic has fully shifted to the new ("green") instances and validation succeeds?',
+    choices: [
+      'They keep serving traffic alongside the green instances indefinitely',
+      'They are terminated (or kept for a configured wait period) after CodeDeploy confirms the new environment is healthy',
+      'They are automatically converted into the new green environment',
+      'CodeDeploy pauses indefinitely and requires manual termination',
+    ],
+    correctIndexes: [1],
+    explanation:
+      'In an EC2/on-premises blue/green deployment, CodeDeploy provisions a replacement (green) Auto Scaling group, shifts traffic to it once healthy, and then terminates the original (blue) instances — optionally after a configurable wait time — giving a clean cutover with the old environment available briefly for a fast rollback if needed.',
+  },
+  {
+    id: 'dep-37',
+    domain: 'deployment',
+    question:
+      'A platform team wants application teams to self-provision pre-approved, governed infrastructure patterns (like "standard VPC" or "standard RDS instance") from a catalog, without giving them direct IAM permissions to create those resources themselves. What AWS service fits this?',
+    choices: [
+      'AWS Service Catalog',
+      'AWS Config',
+      'AWS Organizations',
+      'AWS Systems Manager Automation',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'Service Catalog lets administrators package approved CloudFormation templates as "products" in a catalog; end users can launch those products through a constrained self-service interface without needing direct IAM permissions to create the underlying resources, keeping provisioning governed and consistent.',
+  },
 
   // ---------------------------------------------------------------------
   // Troubleshooting and Optimization
@@ -1506,6 +1866,111 @@ export const QUESTIONS: QuizQuestion[] = [
     correctIndexes: [1],
     explanation:
       "Lambda's 15-minute maximum duration forces awkward chaining for longer jobs. A scheduled Fargate task removes that limit entirely and, like Lambda, only bills for the resources used during the ~20-minute run — cheaper than a permanently running EC2 instance and simpler than artificially chaining Lambda invocations.",
+  },
+  {
+    id: 'tr-23',
+    domain: 'troubleshooting',
+    question:
+      "One Lambda function in an account starts throttling with a burst of traffic, and unrelated Lambda functions in the same account start throttling too, even though none of them individually exceeds a high invocation rate. What is the most likely cause, and fix?",
+    choices: [
+      "The functions share the account's unreserved concurrency pool, which one noisy function exhausted; set reserved concurrency on the noisy function to cap its usage and protect the shared pool",
+      'The account has hit its S3 request limit',
+      "The functions' IAM roles have expired",
+      'CloudWatch Logs retention is misconfigured',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "All Lambda functions in an account/region draw from a shared account-level concurrency limit unless they have reserved concurrency carved out. A single function scaling up under load can exhaust that shared pool and cause unrelated functions to throttle too — setting reserved concurrency on the noisy function caps its draw and protects the rest.",
+  },
+  {
+    id: 'tr-24',
+    domain: 'troubleshooting',
+    question:
+      'You need to be alerted whenever the phrase "OutOfMemoryError" appears in a Lambda function\'s CloudWatch Logs, ideally within seconds, without paying to run ad-hoc Logs Insights queries on a schedule. What should you configure?',
+    choices: [
+      'A CloudWatch Logs metric filter matching the pattern, driving a CloudWatch alarm',
+      'A scheduled EventBridge rule that runs a Logs Insights query every minute',
+      'S3 Event Notifications on the log group',
+      'AWS Config custom rules',
+    ],
+    correctIndexes: [0],
+    explanation:
+      'A metric filter scans incoming log events in near real time for a pattern and emits a custom metric data point on a match; a CloudWatch alarm on that metric then fires quickly with no polling or scheduled queries needed. Logs Insights is better suited to ad-hoc, on-demand investigation rather than continuous low-latency alerting.',
+  },
+  {
+    id: 'tr-25',
+    domain: 'troubleshooting',
+    question:
+      'A high-traffic API traced with X-Ray is generating so many traces that X-Ray costs and console clutter are becoming a problem, but the team still wants to reliably capture every request that results in an error. What should they adjust?',
+    choices: [
+      'Disable X-Ray entirely and rely on CloudWatch Logs only',
+      "The X-Ray sampling rule, lowering the fixed rate for routine traffic while X-Ray's default behavior still always traces the first request per second and errors are still visible in the reduced sample",
+      'The Lambda function timeout',
+      'The CloudWatch Logs retention period',
+    ],
+    correctIndexes: [1],
+    explanation:
+      'X-Ray sampling rules control what fraction of requests get traced (beyond a guaranteed base rate) to control volume and cost. Tuning the rate down reduces routine trace volume while still capturing a representative sample; teams that need to guarantee every error is captured can pair this with custom sampling rules or annotate/force-sample error paths.',
+  },
+  {
+    id: 'tr-26',
+    domain: 'troubleshooting',
+    question:
+      'An RDS instance on a burstable t3 instance class performs fine most of the day but suddenly becomes sluggish during sustained peak traffic, with CPU showing as high but not maxed. Which CloudWatch metric would confirm the instance ran out of burst capacity?',
+    choices: [
+      'FreeStorageSpace',
+      'CPUCreditBalance dropping to (or hovering near) zero',
+      'DatabaseConnections',
+      'ReadIOPS',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Burstable (t3/t4g) instances earn CPU credits during idle periods and spend them during bursts above their baseline. CPUCreditBalance nearing zero means the instance has exhausted its credits and is now capped at baseline CPU performance — explaining sluggishness under sustained load. The fix is typically switching to a non-burstable instance class or enabling unlimited bursting.",
+  },
+  {
+    id: 'tr-27',
+    domain: 'troubleshooting',
+    question:
+      "Multiple unrelated APIs hosted on the same API Gateway account start returning 429 Too Many Requests during a traffic spike, even though no single client is exceeding its own usage plan quota. What is the most likely cause?",
+    choices: [
+      'A single Lambda function has been given reserved concurrency of zero',
+      "The account-level API Gateway steady-state/burst throttle limit (a regional, per-account default) has been exceeded across all APIs combined",
+      'The DynamoDB table backing the API is under-provisioned',
+      'CloudFront is caching stale responses',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "API Gateway enforces a default account-level (regional) throttle limit shared across all APIs in that account/region, separate from any per-client usage plan. A traffic spike that exceeds this shared account limit throttles requests across unrelated APIs — the fix is requesting a service quota increase or isolating high-traffic APIs, not touching an individual usage plan.",
+  },
+  {
+    id: 'tr-28',
+    domain: 'troubleshooting',
+    question:
+      'A Step Functions standard workflow execution appears to be stuck, with no visible errors in the state machine\'s recent CloudWatch metrics. What is the most direct way to see exactly which state it is currently in and how long it has been there?',
+    choices: [
+      "Reading the state machine's IAM role policy",
+      "Viewing the specific execution's event history and visual workflow graph in the Step Functions console",
+      'Checking S3 access logs',
+      'Increasing the Lambda function timeout',
+    ],
+    correctIndexes: [1],
+    explanation:
+      "Each Step Functions execution has a detailed event history and a visual graph in the console showing exactly which state is active (or where it stalled), how long each state took, and any input/output at each step — the direct way to diagnose a stuck execution, rather than inferring from aggregate CloudWatch metrics.",
+  },
+  {
+    id: 'tr-29',
+    domain: 'troubleshooting',
+    question:
+      "After moving a Lambda function into a VPC to reach a private RDS instance, cold-start latency increased noticeably and the function occasionally fails to scale under burst traffic. What is the most likely explanation?",
+    choices: [
+      "VPC-attached Lambda functions must provision elastic network interfaces (ENIs) in the configured subnets, and a subnet with too few free IP addresses can throttle scaling and add latency",
+      'RDS does not support connections from Lambda',
+      'VPC Lambda functions cannot use environment variables',
+      'The Lambda function\'s IAM role lost permissions when moved into the VPC',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Lambda functions in a VPC use Hyperplane ENIs shared across functions/subnets, which reduced most of the historical ENI cold-start penalty, but scaling is still bounded by available IP addresses in the configured subnets — a small or nearly-full subnet can throttle concurrency growth and add latency. Sizing subnets with enough free IPs (and spreading across multiple subnets/AZs) is the standard fix.",
   },
 ];
 
