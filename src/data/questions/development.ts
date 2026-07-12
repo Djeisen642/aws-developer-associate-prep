@@ -758,4 +758,29 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     explanation:
       "Standard Workflows guarantee exactly-once execution, support runs up to one year long, and keep a visual, auditable execution history in the console — but are priced per state transition, which gets expensive at very high volume. Express Workflows are priced by number of executions, duration, and memory, and are built for high-volume, short-duration (up to 5 minutes) workloads — but offer only at-least-once or at-most-once execution semantics, and execution details live in CloudWatch Logs rather than the built-in console history Standard provides. Both workflow types support the same state types, including Map.",
   },
+  {
+    id: 'dev-57',
+    domain: 'development',
+    question:
+      "A developer wants AI-powered, context-aware code suggestions, natural-language chat about their codebase, and automated code reviews directly inside their IDE while working on AWS-integrated application code. Which AWS tool provides this?",
+    choices: ['Amazon Q Developer', 'AWS CodeGuru Reviewer alone', 'Amazon Comprehend', 'Amazon SageMaker'],
+    correctIndexes: [0],
+    explanation:
+      "Amazon Q Developer is AWS's generative-AI-powered assistant for developers, available as an IDE/CLI extension (VS Code, JetBrains, and more) as well as in the AWS console and chat interfaces. It provides inline code suggestions, natural-language chat about a codebase, and automated code reviews integrated directly into the developer's existing workflow. CodeGuru Reviewer gives automated code-review recommendations but isn't a conversational, IDE-embedded coding assistant; Comprehend and SageMaker are general-purpose NLP/ML services, not developer coding assistants.",
+  },
+  {
+    id: 'dev-58',
+    domain: 'development',
+    question:
+      'A team has a large legacy Java 8 application and wants to upgrade it to a newer Java LTS version, plus generate unit tests for previously untested code, without performing the migration by hand line-by-line. Which capability fits?',
+    choices: [
+      "Amazon Q Developer's agentic code transformation and unit test generation capabilities",
+      "CodeBuild's default build image, upgraded to a newer Java runtime",
+      'The `sam build` command',
+      'Manually rewriting the application from scratch',
+    ],
+    correctIndexes: [0],
+    explanation:
+      "Amazon Q Developer includes agentic code transformation capabilities — for example, automating Java version upgrades (like Java 8/11 to a newer LTS release) and generating unit tests for existing code — substantially reducing what would otherwise be a large, error-prone manual migration effort. Changing a CodeBuild image's runtime version doesn't touch the application's own source code, and `sam build` just compiles/packages code as-is.",
+  },
 ];

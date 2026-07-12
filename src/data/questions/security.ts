@@ -557,15 +557,15 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     id: 'sec-40',
     domain: 'security',
     question:
-      'An organization using AWS Organizations wants to guarantee that no account in a particular OU can ever launch resources outside a specific set of allowed AWS Regions, regardless of what IAM permissions an admin inside that account grants. What should be applied?',
+      "A SaaS monitoring vendor assumes an IAM role in each customer's AWS account (using a role ARN the customer creates and shares with the vendor) to pull CloudWatch metrics on their behalf. AWS's documented mitigation for the cross-account \"confused deputy\" problem — where a malicious customer could trick the vendor's service into assuming a different customer's role on their behalf — is for each customer's role trust policy to require:",
     choices: [
-      'An IAM permissions boundary attached to every user',
-      'A Service Control Policy (SCP) attached to the OU, denying actions outside the allowed Regions',
-      'A resource-based policy attached to each resource',
-      'AWS Config rules with auto-remediation',
+      "Nothing extra — scoping the trust policy to the vendor's AWS account ID is always sufficient on its own",
+      "A condition requiring sts:ExternalId to match a unique value that customer shared with the vendor specifically for their engagement",
+      'A condition requiring MFA on every AssumeRole call',
+      'A resource-based policy on the monitored resources instead of a role trust policy',
     ],
     correctIndexes: [1],
     explanation:
-      "SCPs are account/OU-wide guardrails in AWS Organizations that set the maximum available permissions for every principal in affected accounts. They don't grant permissions themselves, but a Deny in an SCP overrides any Allow from IAM policies within those accounts — including for admins — making SCPs the right tool for unbypassable, org-wide guardrails like Region restrictions. Permissions boundaries are scoped to individual IAM principals within a single account, not enforced across every account and admin org-wide.",
+      "AWS's documented mitigation for the cross-account confused deputy problem is a unique external ID, passed via the sts:ExternalId condition, known only to that specific customer and the vendor for their engagement. Because a malicious customer doesn't know another customer's external ID, they can't trick the vendor's service into assuming that other customer's role on their behalf — even though the vendor's account ID is legitimately trusted broadly across many different customers' roles. Scoping the trust policy to the vendor's account ID alone doesn't stop this, since that same account is trusted by every customer simultaneously; the external ID is what ties a specific AssumeRole call to the intended customer relationship.",
   },
 ];
