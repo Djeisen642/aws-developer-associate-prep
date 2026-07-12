@@ -122,10 +122,10 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'A mobile app needs users to sign in with email/password and also wants temporary, limited AWS credentials to upload directly to S3. Which Cognito components are needed together?',
     choices: [
-      'A user pool only',
-      'An identity pool only',
+      "A user pool only — its JWTs already function as temporary AWS credentials, so no separate credential exchange step is needed",
+      'An identity pool only, configured to accept unauthenticated (guest) access instead of validating real sign-in credentials',
       'A user pool for authentication plus an identity pool for AWS credentials',
-      'IAM users created per mobile customer',
+      "IAM users created per mobile customer, with access keys embedded in the app on first sign-in",
     ],
     correctIndexes: [2],
     explanation:
@@ -258,9 +258,9 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
       'A FIFO SQS queue must avoid processing the exact same message body twice within a 5-minute window, even if the producer accidentally sends it more than once. What should you enable?',
     choices: [
       'Content-based deduplication (or an explicit MessageDeduplicationId)',
-      'A longer visibility timeout',
-      'A dead-letter queue',
-      'Long polling',
+      "A longer visibility timeout, so a duplicate send always arrives after the original message has already been deleted",
+      'A dead-letter queue, which redirects any message delivered more than once to a separate queue for manual review',
+      'Long polling on the consumer side, which waits for new messages instead of returning immediately when the queue is empty',
     ],
     correctIndexes: [0],
     explanation:
@@ -424,10 +424,10 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'An asynchronously invoked Lambda function occasionally fails. The team wants both failed and successful invocations routed to different downstream targets (an SQS queue for failures, an EventBridge bus for successes) without writing custom retry/routing code inside the function itself. What should the developer configure?',
     choices: [
-      'A dead-letter queue (DLQ) only',
+      'A dead-letter queue (DLQ) only, which can route both successful and failed invocation results to two different targets',
       'Lambda Destinations, configuring separate OnSuccess and OnFailure targets',
-      'An increased SQS visibility timeout',
-      'A CloudWatch Logs subscription filter',
+      'An increased SQS visibility timeout, which lets the function route successes and failures to separate targets automatically',
+      'A CloudWatch Logs subscription filter, streaming success and failure log entries to two different destinations in real time',
     ],
     correctIndexes: [1],
     explanation:
@@ -545,9 +545,9 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
       "A Java Lambda function has unacceptably long cold-start latency for a latency-sensitive, low-traffic API, and the team doesn't want to pay for provisioned concurrency around the clock. What Lambda feature directly targets this?",
     choices: [
       'Lambda SnapStart, which caches an initialized execution environment snapshot and resumes from it',
-      'Increasing the function timeout',
-      'Switching the handler to use synchronous invocation',
-      'Enabling X-Ray tracing',
+      "Increasing the function timeout, which gives the initialization phase more time to complete before the next request arrives",
+      'Switching the handler to use synchronous invocation, which skips the cold-start initialization phase for every request',
+      "Enabling X-Ray tracing, which pre-warms the execution environment as a side effect of instrumenting the function",
     ],
     correctIndexes: [0],
     explanation:
@@ -576,8 +576,8 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     choices: [
       "Keep raising the RDS instance's max_connections parameter indefinitely",
       'RDS Proxy, which pools and multiplexes a small set of database connections across many concurrent Lambda invocations',
-      'An RDS read replica',
-      'ElastiCache placed in front of RDS',
+      'An RDS read replica, adding a separate read-only endpoint Lambda can round-robin connections across to spread out the load',
+      'ElastiCache placed in front of RDS, pooling connections at the cache layer so the database itself sees only a handful of them',
     ],
     correctIndexes: [1],
     explanation:
@@ -709,10 +709,10 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'An SQS-triggered Lambda function processes payment events. Because SQS delivery is at-least-once, the same message can occasionally be delivered and processed more than once — after a visibility timeout expiry, for example. The team wants to guarantee a given payment is never charged twice even on duplicate delivery. What should the function implement?',
     choices: [
-      "Reduce the queue's visibility timeout to zero to avoid redelivery entirely",
-      'An idempotency check: record a unique key (like the payment ID) in a fast-lookup store such as DynamoDB, using a conditional write, before performing the charge — and skip processing if that key is already recorded',
-      "Increase the Lambda function's reserved concurrency",
-      'Switch the queue to FIFO, which alone makes the charge operation idempotent',
+      "Reduce the queue's visibility timeout to zero, so a message is deleted immediately after being received the first time",
+      "An idempotency check: record the payment ID in a fast-lookup store using a conditional write before charging, and skip if it's already recorded",
+      "Increase the Lambda function's reserved concurrency, so each payment event gets its own isolated execution environment",
+      'Switch the queue to FIFO, which alone deduplicates and makes the downstream charge operation idempotent',
     ],
     correctIndexes: [1],
     explanation:
@@ -749,10 +749,10 @@ export const DEVELOPMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'A workflow processes millions of short-lived (under a few minutes) events per day and needs fast, cost-efficient orchestration rather than a guaranteed once-only execution and a fully durable, console-visualized audit trail for every run. Which Step Functions workflow type fits, and what is the key trade-off versus the alternative?',
     choices: [
-      'Standard Workflows, because only Standard supports a Map state',
-      'Express Workflows, priced by number of executions/duration/memory and built for high-volume, short-duration workloads — trading Standard\'s exactly-once semantics and built-in execution history for at-least-once (or at-most-once) semantics and CloudWatch Logs-based history',
-      'Standard Workflows, because they support long-running executions',
-      'Express Workflows, because they support executions up to one year long',
+      'Standard Workflows, because only Standard supports a Map state for iterating over array input',
+      "Express Workflows — cheaper and built for high-volume, short-duration workloads, at the cost of Standard's exactly-once guarantee",
+      'Standard Workflows, because they alone are billed per state transition instead of per execution',
+      'Express Workflows, because they support executions running for up to one year',
     ],
     correctIndexes: [1],
     explanation:

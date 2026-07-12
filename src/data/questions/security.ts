@@ -7,10 +7,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'An EC2 instance running your application needs permission to read from an S3 bucket. What is the AWS best-practice way to grant that access?',
     choices: [
-      'Store an IAM user\'s access key and secret on the instance',
+      "Store an IAM user's access key and secret on the instance, refreshing them manually whenever they're due to expire",
       'Attach an IAM role to the instance profile with a policy granting S3 read access',
-      'Make the S3 bucket public',
-      'Embed credentials in the application code',
+      'Make the S3 bucket public, so the instance can read objects without needing any credentials at all',
+      'Embed credentials in the application code, rotating them through a new deployment each time they change',
     ],
     correctIndexes: [1],
     explanation:
@@ -47,10 +47,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'A Lambda function in Account A needs to access a DynamoDB table in Account B. What is the standard cross-account access pattern?',
     choices: [
-      'Copy the DynamoDB table into Account A',
+      'Copy the DynamoDB table into Account A, keeping the two copies in sync with a scheduled export/import job',
       'Have the Lambda function assume an IAM role in Account B via STS AssumeRole',
-      'Make the DynamoDB table public',
-      'Share the Account B root credentials with Account A',
+      'Make the DynamoDB table public, so any caller can read and write to it without further configuration',
+      "Share Account B's root user credentials with Account A's Lambda function via an environment variable",
     ],
     correctIndexes: [1],
     explanation:
@@ -72,10 +72,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the primary difference between an IAM identity-based policy and a resource-based policy?',
     choices: [
-      'Identity-based policies are attached to users/groups/roles; resource-based policies are attached directly to resources like S3 buckets and can grant access to a different account',
-      'Resource-based policies only apply to EC2 instances',
-      'There is no functional difference, only naming',
-      'Identity-based policies cannot deny access, only allow it',
+      'Identity-based policies attach to users/groups/roles; resource-based policies attach directly to resources (like S3 buckets) and can grant cross-account access',
+      'Resource-based policies only apply to EC2 instances and cannot be attached to any other AWS resource type',
+      'There is no functional difference between the two — they are simply two different names for the same construct',
+      'Identity-based policies can only allow access; only resource-based policies are capable of denying it',
     ],
     correctIndexes: [0],
     explanation:
@@ -97,10 +97,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'What does AWS Signature Version 4 (SigV4) provide when making direct HTTP requests to AWS service APIs?',
     choices: [
-      'Encryption of the request body',
+      "Encryption of the request body, so the payload contents are unreadable to anyone without the caller's access key",
       'A way to cryptographically sign requests so AWS can authenticate the caller and verify the request has not been tampered with',
-      'Automatic retry logic',
-      'DNS resolution for regional endpoints',
+      'Automatic retry logic that resends a failed request with the same signature until it eventually succeeds',
+      'DNS resolution for regional endpoints, mapping a service name to the nearest healthy regional API endpoint',
     ],
     correctIndexes: [1],
     explanation:
@@ -142,10 +142,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the least-privilege best practice when writing an IAM policy for a Lambda function that only needs to read from one specific S3 bucket?',
     choices: [
-      'Grant s3:* on Resource: *',
+      'Grant s3:* on Resource: *, which is simplest to write and covers every possible S3 action the function might ever need',
       'Grant only the needed actions (e.g., s3:GetObject) scoped to the specific bucket ARN/prefix',
-      'Attach the AdministratorAccess managed policy for simplicity',
-      'Grant s3:* scoped to that bucket only',
+      "Attach the AdministratorAccess managed policy, since Lambda execution roles aren't billed per attached policy",
+      'Grant s3:* scoped to that bucket only, since scoping the resource already satisfies least privilege on its own',
     ],
     correctIndexes: [1],
     explanation:
@@ -172,10 +172,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'What is an IAM permissions boundary used for?',
     choices: [
-      'It replaces the need for identity-based policies entirely',
+      'It replaces the need for identity-based policies entirely, becoming the only permissions document an entity needs',
       'It sets the maximum permissions an IAM entity (user or role) can have, regardless of what its identity-based policies grant',
-      'It defines network boundaries for a VPC',
-      'It encrypts IAM policy documents at rest',
+      'It defines network boundaries for a VPC, restricting which subnets an IAM entity is allowed to operate within',
+      'It encrypts IAM policy documents at rest, so only entities holding the matching KMS key can read them',
     ],
     correctIndexes: [1],
     explanation:
@@ -197,10 +197,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'A Lambda function in Account A needs permission to be invoked directly by an S3 bucket event in the same account, without assuming a role. What must be granted?',
     choices: [
-      'A KMS key policy allowing S3',
+      'A KMS key policy allowing S3, since Lambda invocations are authorized through the same key policy used for encryption',
       'A resource-based policy on the Lambda function (lambda:AddPermission) granting S3 the lambda:InvokeFunction action',
-      'An IAM user with S3FullAccess',
-      'A VPC endpoint policy for Lambda',
+      "An IAM user with S3FullAccess, attached so S3 can assume that user's permissions when it calls the function",
+      "A VPC endpoint policy for Lambda, since invocations from S3 route through the function's VPC endpoint by default",
     ],
     correctIndexes: [1],
     explanation:
@@ -237,10 +237,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'Which identities can Cognito Identity Pools hand out temporary AWS credentials to, in addition to authenticated users from a login provider?',
     choices: [
-      'Only authenticated users — unauthenticated access is never supported',
+      'Only authenticated users — unauthenticated access is never supported by identity pools',
       'Unauthenticated ("guest") users, if you enable and configure an unauthenticated IAM role',
-      'Only IAM users created manually',
-      'Only EC2 instance roles',
+      'Only IAM users created manually and mapped one-to-one to each Cognito user during sign-up',
+      'Only EC2 instance roles, which the identity pool proxies for any authenticated mobile client',
     ],
     correctIndexes: [1],
     explanation:
@@ -252,10 +252,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the maximum duration a temporary session obtained via sts:AssumeRole can typically last, by default and configurable range?',
     choices: [
-      'Always exactly 1 hour, never configurable',
-      'Between 15 minutes and the role\'s configured max session duration (up to 12 hours), default 1 hour',
-      'Always 24 hours',
-      'Sessions never expire once issued',
+      'Always exactly 1 hour, with no way for the role or caller to request a different duration',
+      "Between 15 minutes and the role's configured max session duration (up to 12 hours), default 1 hour",
+      'Always 24 hours, matching the maximum session length AWS enforces for every IAM role account-wide',
+      'Sessions never expire once issued, remaining valid until the role or its trust policy is deleted',
     ],
     correctIndexes: [1],
     explanation:
@@ -267,10 +267,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the difference between a KMS key policy and an IAM policy attached to a user, when both are relevant to accessing a customer-managed CMK?',
     choices: [
-      'IAM policies are irrelevant for KMS; only the key policy matters',
-      'The key policy is always attached directly to the CMK and is the root of access control for that key; IAM policies can only grant additional access if the key policy allows it (e.g., via delegation to IAM)',
-      'Key policies and IAM policies are exactly the same construct with different names',
-      'IAM policies fully override key policies',
+      'IAM policies are irrelevant for KMS — only the resource-based key policy is ever evaluated for any request',
+      'The key policy, attached directly to the CMK, is the root of access control; IAM policies only grant access if the key policy delegates permission to IAM',
+      'Key policies and IAM policies are the exact same construct, just attached to different resource types',
+      'IAM policies always take precedence over the key policy, regardless of what the key policy allows',
     ],
     correctIndexes: [1],
     explanation:
@@ -307,10 +307,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'Security groups are stateful while network ACLs (NACLs) are stateless. What does this mean in practice?',
     choices: [
-      'Security groups require explicit outbound rules for return traffic; NACLs do not',
-      'For security groups, a response to an allowed inbound request is automatically allowed out (no separate outbound rule needed); NACLs evaluate inbound and outbound rules independently, so return traffic must be explicitly allowed both ways',
-      'NACLs only apply to EC2 instances, not subnets',
-      'There is no practical difference; both behave identically',
+      'Security groups require explicit outbound rules for return traffic, while NACLs allow all return traffic automatically',
+      'For security groups, an allowed inbound response is automatically allowed back out; NACLs evaluate inbound/outbound independently, so return traffic needs its own rule',
+      'NACLs only apply to individual EC2 instances directly, never to an entire subnet at once',
+      'There is no practical difference between the two — both enforce identical stateful rule evaluation',
     ],
     correctIndexes: [1],
     explanation:
@@ -353,10 +353,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       "Company A hosts a data file in an S3 bucket and needs to grant Company B's AWS account (a completely separate account) read-only access to a single object prefix, without creating any IAM users or roles in Company A's account for Company B to use. What should Company A configure?",
     choices: [
-      "An S3 bucket policy with a Principal referencing Company B's AWS account ID, scoped to the object prefix, granting s3:GetObject",
-      'Make the entire bucket public',
-      "Create an IAM user in Company A's account and share its access keys with Company B",
-      'Enable S3 Transfer Acceleration',
+      "An S3 bucket policy naming Company B's account ID as Principal, scoped to the prefix, granting s3:GetObject",
+      'Make the entire bucket public, so any AWS account (or anonymous caller) can read every object in it',
+      "Create an IAM user in Company A's account and share its long-lived access keys with Company B",
+      'Enable S3 Transfer Acceleration, which opens a separate accelerated endpoint reachable from any AWS account',
     ],
     correctIndexes: [0],
     explanation:
@@ -409,10 +409,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'A financial services company must store audit log objects in S3 such that no one — including the account root user or an admin with full IAM permissions — can delete or overwrite them until a fixed retention date has passed. What should you enable?',
     choices: [
-      'S3 Versioning alone',
+      'S3 Versioning alone, which by itself already prevents any version of an object from ever being deleted',
       'S3 Object Lock in Compliance mode, with a retention period set on the objects',
       'A bucket policy that denies s3:DeleteObject to all principals',
-      'MFA Delete on the bucket',
+      'MFA Delete on the bucket, which permanently blocks all delete operations rather than only requiring extra confirmation',
     ],
     correctIndexes: [1],
     explanation:
@@ -424,10 +424,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'A CloudFront distribution serves private content from an S3 bucket. The security team wants to guarantee that the S3 objects can only ever be reached through CloudFront, never directly via the bucket\'s S3 URL, without managing expiring credentials. What should you configure?',
     choices: [
-      'Make the S3 bucket fully public and rely on obscurity of the URL',
-      'Origin Access Control (OAC) on the distribution, paired with a bucket policy that only allows that CloudFront distribution',
-      'A Lambda@Edge function that checks the Referer header',
-      'S3 Transfer Acceleration',
+      'Make the S3 bucket fully public, relying on the object URLs being too hard to guess',
+      'Origin Access Control (OAC), paired with a bucket policy that only allows requests from that CloudFront distribution',
+      'A Lambda@Edge function that checks the Referer header before forwarding the request to S3',
+      'S3 Transfer Acceleration, routing requests through a nearby CloudFront edge location by default',
     ],
     correctIndexes: [1],
     explanation:
@@ -471,7 +471,7 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     choices: [
       'A Deny statement with condition key aws:SecureTransport equals false',
       'An Allow statement scoped only to HTTPS IP ranges',
-      'S3 default encryption (SSE-S3)',
+      'S3 default encryption (SSE-S3), which automatically upgrades any plain-HTTP request to HTTPS before storing the object',
       'A CORS configuration restricting allowed origins',
     ],
     correctIndexes: [0],
@@ -529,9 +529,9 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'An application in a private subnet (no NAT gateway) needs to call the Secrets Manager API without any traffic leaving the AWS network. Secrets Manager does not support gateway VPC endpoints. What should you create instead?',
     choices: [
-      'A gateway VPC endpoint for Secrets Manager',
+      'A gateway VPC endpoint for Secrets Manager, since every AWS service supports the same route-table-based endpoint type as S3',
       'An interface VPC endpoint (powered by AWS PrivateLink) for Secrets Manager, with a security group controlling access',
-      'A NAT gateway',
+      'A NAT gateway, which lets Secrets Manager traffic reach the service over the public internet while staying encrypted in transit',
       "A VPN connection to Secrets Manager's public endpoint",
     ],
     correctIndexes: [1],
@@ -544,10 +544,10 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     question:
       'A partner system outside your AWS account needs to verify the digital signature on documents your application signs, but must never be able to create new signatures or access any private key material. What KMS setup fits this?',
     choices: [
-      'A symmetric KMS key used with GenerateDataKey',
-      "An asymmetric KMS key pair used for signing, where only the public key is exported/shared for verification while the private key stays in KMS",
-      'An IAM user with kms:Sign permission, shared with the partner',
-      'A customer-managed multi-Region symmetric key',
+      'A symmetric KMS key used with GenerateDataKey, which produces a public/private key pair for signing',
+      "An asymmetric KMS key pair used for signing — the private key never leaves KMS, but the public key can be shared freely for verification",
+      'An IAM user with kms:Sign permission, shared with the partner so they can call the signing API directly',
+      'A customer-managed multi-Region symmetric key, replicated so the partner can verify signatures locally',
     ],
     correctIndexes: [1],
     explanation:

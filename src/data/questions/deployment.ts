@@ -27,10 +27,10 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the purpose of buildspec.yml in AWS CodeBuild?',
     choices: [
-      'It defines IAM permissions for the build project',
+      'It defines IAM permissions for the build project, replacing the need to attach a service role to CodeBuild',
       'It declares the build commands, phases (install, pre_build, build, post_build), and artifacts to produce',
-      'It configures the CodePipeline stages',
-      'It defines the CloudFormation stack resources',
+      'It configures the CodePipeline stages that will invoke this build project as part of a larger release pipeline',
+      'It defines the CloudFormation stack resources that CodeBuild will provision before compiling the application',
     ],
     correctIndexes: [1],
     explanation:
@@ -182,10 +182,10 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the purpose of an .ebextensions configuration file in an Elastic Beanstalk application source bundle?',
     choices: [
-      'It defines the CodePipeline stages for the app',
-      'It customizes the Beanstalk environment — installing packages, running commands, or configuring resources — beyond the platform defaults',
-      'It is required only for Docker-based Beanstalk platforms',
-      'It replaces the need for an application version',
+      'It defines the CodePipeline stages for the app, replacing the need for a separate pipeline definition',
+      'It customizes the Beanstalk environment — installing packages, running commands, or configuring resources — beyond platform defaults',
+      'It is required only for Docker-based Beanstalk platforms and has no effect on any other platform type',
+      'It replaces the need for an application version, letting Beanstalk deploy directly from the config file',
     ],
     correctIndexes: [1],
     explanation:
@@ -207,10 +207,10 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'How can you speed up repeated CodeBuild runs that reinstall the same large set of dependencies (e.g., npm or Maven packages) on every build?',
     choices: [
-      'Increase the build\'s compute type only',
+      "Increase the build's compute type only, which lets dependency downloads complete over a faster network connection",
       'Enable CodeBuild caching (local or S3) to persist dependency directories between builds',
-      'Switch to a smaller Docker image',
-      'Disable the install phase entirely',
+      'Switch to a smaller Docker image, which skips the dependency install step on every subsequent build automatically',
+      'Disable the install phase entirely, since CodeBuild silently reuses whatever was installed on the previous run',
     ],
     correctIndexes: [1],
     explanation:
@@ -232,10 +232,10 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'What is the AWS Cloud Development Kit (CDK) primarily used for?',
     choices: [
-      'Writing CloudFormation templates in familiar programming languages (TypeScript, Python, Java, etc.), which synthesize into CloudFormation templates',
-      'Replacing IAM entirely with code-based permissions',
-      'A GUI-only tool for clicking through infrastructure setup',
-      'A container orchestration engine, alternative to ECS',
+      'Writing infrastructure in familiar programming languages (TypeScript, Python, Java) that synthesize into CloudFormation templates',
+      'Replacing IAM entirely with code-based permissions, removing the need for any IAM policies or roles',
+      'A GUI-only tool for clicking through infrastructure setup, with no programming language involved',
+      'A container orchestration engine, positioned as a direct alternative to ECS and Fargate',
     ],
     correctIndexes: [0],
     explanation:
@@ -319,7 +319,7 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     choices: [
       'Delete and recreate the stack from scratch each time',
       "Create and review a change set before executing the update, checking each resource's 'Replacement' value",
-      'Disable stack rollback',
+      'Disable stack rollback, so a disruptive replacement completes without CloudFormation reverting it partway through',
       "Increase the RDS instance's backup retention period",
     ],
     correctIndexes: [1],
@@ -364,9 +364,9 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
       'A team wants every container image pushed to their Amazon ECR repository to be automatically scanned for known OS and package vulnerabilities, with no separate tool to run manually. What should they enable?',
     choices: [
       'Amazon Inspector or ECR basic scanning, configured for scan-on-push on the repository',
-      'S3 Object Lock on the repository',
-      'CloudTrail data events for the repository',
-      'A CodeBuild step that runs `docker history`',
+      'S3 Object Lock on the repository, which extends its WORM protection to also flag vulnerable image layers',
+      'CloudTrail data events for the repository, which record every image pull and push alongside a vulnerability score',
+      "A CodeBuild step that runs `docker history`, printing each layer's known vulnerabilities into the build log",
     ],
     correctIndexes: [0],
     explanation:
@@ -380,8 +380,8 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     choices: [
       'A CloudFormation macro that transforms the entire template',
       'A custom resource, backed by a Lambda function that implements the create/update/delete logic',
-      'A nested stack pointing at the third-party API',
-      'A stack policy',
+      'A nested stack pointing at the third-party API, since any stack can provision resources outside of AWS given network access',
+      'A stack policy, configured to grant the stack permission to call arbitrary third-party HTTP APIs during provisioning',
     ],
     correctIndexes: [1],
     explanation:
@@ -438,10 +438,10 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     question:
       'A CodeBuild project reinstalls the same large set of npm dependencies from scratch on every single build, adding several minutes to each run. What is the most direct way to speed this up?',
     choices: [
-      'Switch to a larger CodeBuild compute type',
+      'Switch to a larger CodeBuild compute type, which downloads and installs dependencies over a higher-bandwidth network path',
       'Configure a CodeBuild cache (local or S3) for the dependency directory (e.g., node_modules)',
-      'Reduce the number of CodePipeline stages',
-      'Disable CodeBuild logs',
+      'Reduce the number of CodePipeline stages, since fewer stages means fewer opportunities to reinstall the same packages',
+      'Disable CodeBuild logs, removing the overhead of streaming install output to CloudWatch Logs on every run',
     ],
     correctIndexes: [1],
     explanation:
@@ -499,9 +499,9 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
       'A CI/CD pipeline needs to build a Lambda function packaged as a container image, push it to ECR, and update the Lambda function to use the new image on every commit. Which CodeBuild buildspec step is required here that would not be needed when deploying a .zip-based Lambda function?',
     choices: [
       'Running `docker build` and `docker push` to publish the image to ECR, then updating the function with the new image URI',
-      'Running `npm install`',
-      'Running unit tests',
-      'Uploading a build artifact to an S3 bucket',
+      'Running `npm install`, which resolves and pulls the base image layers needed for a container-packaged function',
+      'Running unit tests, which for a container-image function also serves as the step that pushes the image to ECR',
+      'Uploading a build artifact to an S3 bucket, which is how CodeBuild always delivers new code to Lambda regardless of packaging format',
     ],
     correctIndexes: [0],
     explanation:
