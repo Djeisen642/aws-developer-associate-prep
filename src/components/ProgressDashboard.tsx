@@ -29,9 +29,9 @@ function readinessColor(score: number): string {
 }
 
 function readinessCaveat(coverage: number): string {
-  if (coverage < 0.3) return "Early days — you've only tried a slice of the bank. Keep practicing before trusting this number.";
-  if (coverage < 0.6) return 'Decent sample so far — more practice will sharpen this estimate.';
-  return "Solid coverage — this is a reasonably reliable read on where you'd land.";
+  if (coverage < 0.3) return 'Based on a small share of the question bank, so treat this as a rough figure.';
+  if (coverage < 0.6) return 'Based on part of the question bank; the estimate firms up as more questions are attempted.';
+  return 'Based on most of the question bank. It reflects this bank only and does not predict your exam score.';
 }
 
 const base = import.meta.env.BASE_URL;
@@ -105,7 +105,7 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="Day streak" value={`${streak} 🔥`} />
+        <StatTile label="Day streak" value={`${streak}`} />
         <StatTile label="Quiz accuracy" value={totalAttempted > 0 ? `${overallAccuracy}%` : '—'} />
         <StatTile label="Questions seen" value={`${totalAttempted} / ${questions.length}`} />
         <StatTile
@@ -142,10 +142,10 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
             <p className="font-bold text-white">Smart Review</p>
             <p className="text-sm text-slate-400">
               {totalAttempted === 0
-                ? 'New here? This mixes all four domains using spaced repetition — the fastest way to build real recall.'
+                ? 'Mixes all four domains and resurfaces missed questions on a spaced-repetition schedule.'
                 : dueCount > 0
                   ? `${dueCount} question${dueCount === 1 ? '' : 's'} due for review right now.`
-                  : "You're all caught up — nothing due yet."}
+                  : 'No questions due right now.'}
             </p>
           </div>
         </div>
@@ -170,16 +170,16 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
         <div className="card pop-in mt-6 flex items-center gap-4 p-5">
           <span className="text-3xl">🎯</span>
           <div>
-            <p className="font-bold text-white">Focus area: {domains.find((d) => d.id === weakest.domain)?.label}</p>
+            <p className="font-bold text-white">Lowest accuracy: {domains.find((d) => d.id === weakest.domain)?.label}</p>
             <p className="text-sm text-slate-400">
-              Currently at {weakest.accuracy}% accuracy — drill this domain in Quiz Mode.
+              {weakest.accuracy}% across {weakest.attempted} attempted.
             </p>
           </div>
         </div>
       )}
 
       <div className="card mt-6 p-5 sm:p-6">
-        <h3 className="font-bold text-white">Domain mastery</h3>
+        <h3 className="font-bold text-white">Accuracy by domain</h3>
         <div className="mt-4 flex flex-col gap-4">
           {domainStats.map((d) => {
             const info = domains.find((x) => x.id === d.domain)!;
@@ -228,7 +228,7 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
 
       {totalAttempted === 0 && cardsReviewed === 0 && (
         <p className="mt-6 text-center text-sm text-slate-400">
-          No activity yet — hit Quiz Mode or Flashcards to start building your stats!
+          No activity yet. Stats appear after your first quiz or flashcard session.
         </p>
       )}
     </div>

@@ -99,7 +99,7 @@ export const DEPLOYMENT_QUESTIONS: QuizQuestion[] = [
     choices: ['EC2 launch type', 'Fargate launch type', 'On-premises (ECS Anywhere)', 'Spot Fleet launch type'],
     correctIndexes: [1],
     explanation:
-      'Fargate is a serverless compute engine for containers — AWS manages the underlying infrastructure; you just define task definitions with CPU/memory requirements.',
+      'Fargate is a serverless compute engine for containers — AWS manages the underlying infrastructure; you define task definitions with CPU/memory requirements.',
   },
   {
     id: 'dep-10',

@@ -345,7 +345,7 @@ export const SECURITY_QUESTIONS: QuizQuestion[] = [
     ],
     correctIndexes: [0, 1],
     explanation:
-      "Secrets Manager's built-in rotation, paired with its native RDS rotation Lambda template, automatically rotates the secret on a schedule and updates the RDS credentials with zero manual intervention — applications simply call GetSecretValue to always retrieve the current password.",
+      "Secrets Manager's built-in rotation, paired with its native RDS rotation Lambda template, automatically rotates the secret on a schedule and updates the RDS credentials with zero manual intervention — applications call GetSecretValue to retrieve the current password.",
   },
   {
     id: 'sec-26',

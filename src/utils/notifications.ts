@@ -30,6 +30,6 @@ export function maybeNotifyDue(dueCount: number): void {
   if (window.localStorage.getItem(LAST_REMINDED_KEY) === today) return;
   window.localStorage.setItem(LAST_REMINDED_KEY, today);
   new Notification('AWS Dev Associate Prep', {
-    body: `🧠 ${dueCount} question${dueCount === 1 ? '' : 's'} due for review today.`,
+    body: `${dueCount} question${dueCount === 1 ? '' : 's'} due for review today.`,
   });
 }

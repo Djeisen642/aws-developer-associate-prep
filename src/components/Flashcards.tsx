@@ -87,12 +87,12 @@ export default function Flashcards({ cards, domains }: Props) {
           <p className="mt-2 text-4xl font-black text-white">
             {knewCount} / {deck.length}
           </p>
-          <p className="mt-1 text-slate-300">cards you already knew 🎉</p>
+          <p className="mt-1 text-slate-300">cards marked as known</p>
           {learningCount > 0 && (
-            <p className="mt-3 text-sm text-slate-400">{learningCount} still need review — shuffle again to drill them.</p>
+            <p className="mt-3 text-sm text-slate-400">{learningCount} marked as not known.</p>
           )}
           <button onClick={() => resetDeck(selectedDomain)} className="btn-primary mt-6 px-6 py-2.5">
-            Shuffle & restart 🔀
+            Shuffle and restart
           </button>
         </div>
       ) : (
@@ -117,23 +117,21 @@ export default function Flashcards({ cards, domains }: Props) {
             <p className="mt-6 text-xs text-slate-500">Tap card to {flipped ? 'flip back' : 'reveal answer'}</p>
           </button>
 
-          {flipped ? (
+          {flipped && (
             <div className="pop-in mt-4 grid grid-cols-2 gap-3">
               <button
                 onClick={() => mark(false)}
                 className="rounded-xl border border-[var(--color-incorrect)]/40 bg-[var(--color-incorrect)]/10 py-3 font-semibold text-white transition hover:bg-[var(--color-incorrect)]/20"
               >
-                😅 Still learning
+                Didn't know it
               </button>
               <button
                 onClick={() => mark(true)}
                 className="rounded-xl border border-[var(--color-correct)]/40 bg-[var(--color-correct)]/10 py-3 font-semibold text-white transition hover:bg-[var(--color-correct)]/20"
               >
-                ✅ I knew it
+                Knew it
               </button>
             </div>
-          ) : (
-            <p className="mt-4 text-center text-sm text-slate-500">Think it through, then flip the card.</p>
           )}
         </>
       )}

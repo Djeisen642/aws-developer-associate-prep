@@ -25,7 +25,7 @@ const features = [
     href: `${base}cheatsheets/`,
     icon: '📋',
     title: 'Cheat Sheets',
-    body: 'Bite-sized reference pages for the services that show up most on the exam.',
+    body: 'Quick-reference pages for the core services covered on the exam.',
   },
 ];
 ---
@@ -36,19 +36,19 @@ const features = [
       DVA-C02 · Certified Developer – Associate
     </p>
     <h1 class="text-3xl font-black leading-tight text-white sm:text-5xl">
-      Prep for the AWS Dev Associate exam <span class="text-[var(--color-aws-orange)]">without the boredom.</span>
+      Prep for the <span class="text-[var(--color-aws-orange)]">AWS Developer Associate</span> exam
     </h1>
     <p class="mx-auto mt-4 max-w-xl text-slate-300">
-      Quiz yourself with spaced repetition, drill flashcards, and skim cheat sheets — all tracked locally so you
-      always know your weakest domain.
+      Practice questions with spaced repetition, flashcards, and cheat sheets. Progress is tracked in your browser,
+      with accuracy broken out by domain.
     </p>
     <div class="mt-6 flex flex-wrap justify-center gap-3">
-      <a href={`${base}quiz/?${SMART_REVIEW_QUERY}`} class="btn-primary px-6 py-3 text-base">Smart Review 🧠</a>
+      <a href={`${base}quiz/?${SMART_REVIEW_QUERY}`} class="btn-primary px-6 py-3 text-base">Smart Review</a>
       <a href={`${base}quiz/`} class="rounded-xl bg-white/5 px-6 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
-        Start a quiz 🚀
+        Start a quiz
       </a>
       <a href={`${base}flashcards/`} class="rounded-xl bg-white/5 px-6 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
-        Flip flashcards 🃏
+        Flashcards
       </a>
     </div>
   </section>

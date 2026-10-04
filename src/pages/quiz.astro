@@ -5,10 +5,10 @@ import { QUESTIONS } from '../data/questions';
 import { DOMAINS } from '../data/types';
 ---
 
-<Layout title="Quiz Mode" description="Timed, scored AWS Developer Associate practice questions with instant explanations.">
+<Layout title="Quiz Mode" description="Scored AWS Developer Associate practice questions with an explanation after each answer.">
   <div class="pop-in mb-8 text-center">
-    <h1 class="text-3xl font-black text-white sm:text-4xl">Quiz Mode 🎮</h1>
-    <p class="mt-2 text-slate-300">Pick a domain, answer fast, learn from every explanation.</p>
+    <h1 class="text-3xl font-black text-white sm:text-4xl">Quiz Mode</h1>
+    <p class="mt-2 text-slate-300">Practice by domain, or run a Smart Review of the questions that are due.</p>
   </div>
   <Quiz client:load questions={QUESTIONS} domains={DOMAINS} />
 </Layout>

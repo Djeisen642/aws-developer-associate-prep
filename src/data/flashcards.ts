@@ -136,7 +136,7 @@ export const FLASHCARDS: Flashcard[] = [
     id: 'fc-dep-6',
     domain: 'deployment',
     front: 'ECS Launch Types: EC2 vs Fargate',
-    back: 'EC2: you manage/provision the underlying EC2 instances (cluster capacity). Fargate: serverless — AWS manages the infrastructure; you just define CPU/memory per task.',
+    back: 'EC2: you manage/provision the underlying EC2 instances (cluster capacity). Fargate: serverless — AWS manages the infrastructure; you define CPU/memory per task.',
   },
   {
     id: 'fc-dep-7',
