@@ -1,6 +1,12 @@
 import type { Domain, DomainInfo } from '../data/types';
+import { addDaysToKey, getStudyDay, isDayKey } from './date';
 
-const STORAGE_KEY = 'aws-dva-progress-v1';
+export const PROGRESS_STORAGE_KEY = 'aws-dva-progress-v1';
+const STORAGE_KEY = PROGRESS_STORAGE_KEY;
+/** Where a blob we can't read is copied before it would be overwritten. */
+const UNREADABLE_BACKUP_KEY = `${STORAGE_KEY}-unreadable-backup`;
+/** Payload schema version. Saves written before versioning have no `version` field and count as 1. */
+const SCHEMA_VERSION = 1;
 
 /** Leitner-box spaced repetition: box 1 = review again soon, box 5 = well-known. */
 export const MAX_BOX = 5;
@@ -41,33 +47,93 @@ function emptyState(): ProgressState {
   return { quiz: {}, flashcards: {}, sessionDates: [] };
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isCount = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0;
+
+const isTimestamp = (value: unknown): value is string => typeof value === 'string' && !Number.isNaN(Date.parse(value));
+
+function isQuestionRecord(value: unknown): value is QuestionRecord {
+  return (
+    isRecord(value) &&
+    isCount(value.attempts) &&
+    isCount(value.correct) &&
+    typeof value.lastCorrect === 'boolean' &&
+    isTimestamp(value.lastAt) &&
+    (value.box === undefined ||
+      (Number.isInteger(value.box) && (value.box as number) >= 1 && (value.box as number) <= MAX_BOX)) &&
+    // An unparseable dueAt would compare as NaN and the question would never come due again.
+    (value.dueAt === undefined || isTimestamp(value.dueAt))
+  );
+}
+
+function isFlashcardRecord(value: unknown): value is FlashcardRecord {
+  return (
+    isRecord(value) &&
+    isCount(value.seen) &&
+    isCount(value.knew) &&
+    typeof value.lastKnew === 'boolean' &&
+    isTimestamp(value.lastAt)
+  );
+}
+
+/** Returns the saved progress, or null when the payload has an unsupported version or shape. */
+export function parseProgress(raw: string): ProgressState | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed)) return null;
+  if (parsed.version !== undefined && parsed.version !== SCHEMA_VERSION) return null;
+
+  const { quiz = {}, flashcards = {}, sessionDates = [] } = parsed;
+  if (!isRecord(quiz) || !Object.values(quiz).every(isQuestionRecord)) return null;
+  if (!isRecord(flashcards) || !Object.values(flashcards).every(isFlashcardRecord)) return null;
+  if (!Array.isArray(sessionDates) || !sessionDates.every(isDayKey)) return null;
+
+  return {
+    quiz: quiz as Record<string, QuestionRecord>,
+    flashcards: flashcards as Record<string, FlashcardRecord>,
+    sessionDates: [...sessionDates],
+  };
+}
+
 export function loadProgress(): ProgressState {
   if (typeof window === 'undefined') return emptyState();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyState();
-    const parsed = JSON.parse(raw) as Partial<ProgressState>;
-    return {
-      quiz: parsed.quiz ?? {},
-      flashcards: parsed.flashcards ?? {},
-      sessionDates: parsed.sessionDates ?? [],
-    };
+    return (raw === null ? null : parseProgress(raw)) ?? emptyState();
   } catch {
     return emptyState();
   }
 }
 
+/**
+ * A blob we can't read (newer app version, hand edit) would otherwise be replaced by the next save.
+ * Copy it aside first. The first backup is kept; later ones don't clobber it.
+ */
+function preserveUnreadable(storage: Storage) {
+  const raw = storage.getItem(STORAGE_KEY);
+  if (raw === null || parseProgress(raw) !== null) return;
+  if (storage.getItem(UNREADABLE_BACKUP_KEY) === null) storage.setItem(UNREADABLE_BACKUP_KEY, raw);
+}
+
+/** Never throws: storage can be full, blocked, or disabled, and a failed save shouldn't break answering a question. */
 function saveProgress(state: ProgressState) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    preserveUnreadable(window.localStorage);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, ...state }));
+  } catch (error) {
+    console.warn('Could not save progress to localStorage; this answer will not be remembered.', error);
+  }
 }
 
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function touchSession(state: ProgressState) {
-  const today = todayKey();
+function touchSession(state: ProgressState, now: Date) {
+  const today = getStudyDay(now);
   if (!state.sessionDates.includes(today)) {
     state.sessionDates.push(today);
   }
@@ -94,7 +160,7 @@ export function recordQuizAnswer(questionId: string, correct: boolean): Progress
     box: nextBox,
     dueAt: addDays(now, BOX_INTERVAL_DAYS[nextBox]).toISOString(),
   };
-  touchSession(state);
+  touchSession(state, now);
   saveProgress(state);
   return state;
 }
@@ -102,13 +168,14 @@ export function recordQuizAnswer(questionId: string, correct: boolean): Progress
 export function recordFlashcardReview(cardId: string, knew: boolean): ProgressState {
   const state = loadProgress();
   const existing = state.flashcards[cardId] ?? { seen: 0, knew: 0, lastKnew: false, lastAt: '' };
+  const now = new Date();
   state.flashcards[cardId] = {
     seen: existing.seen + 1,
     knew: existing.knew + (knew ? 1 : 0),
     lastKnew: knew,
-    lastAt: new Date().toISOString(),
+    lastAt: now.toISOString(),
   };
-  touchSession(state);
+  touchSession(state, now);
   saveProgress(state);
   return state;
 }
@@ -119,19 +186,15 @@ export function resetProgress(): ProgressState {
   return state;
 }
 
-/** Longest run of consecutive days (ending today or yesterday) the user has practiced. */
-export function computeStreak(sessionDates: string[]): number {
-  if (sessionDates.length === 0) return 0;
-  const dates = new Set(sessionDates);
-  const cursor = new Date();
-  // If they haven't practiced today, streak can still count through yesterday.
-  if (!dates.has(todayKey())) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
+/** Current run of consecutive study days, counting through yesterday if the user hasn't practiced yet today. */
+export function computeStreak(sessionDates: string[], now: Date = new Date()): number {
+  const days = new Set(sessionDates);
+  let cursor = getStudyDay(now);
+  if (!days.has(cursor)) cursor = addDaysToKey(cursor, -1);
   let streak = 0;
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
+  while (days.has(cursor)) {
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = addDaysToKey(cursor, -1);
   }
   return streak;
 }
@@ -211,19 +274,18 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
+/** The single definition of "due", shared by the session list and the badge count so they cannot disagree. */
+function isDue(record: QuestionRecord | undefined, now: number): boolean {
+  if (!record) return true; // never seen: treat like a box-1 item, eager to include
+  return (record.dueAt ? Date.parse(record.dueAt) : 0) <= now;
+}
+
 function dueRecords<T extends { id: string }>(state: ProgressState, questions: T[]): { q: T; box: number }[] {
   const now = Date.now();
   const due: { q: T; box: number }[] = [];
   for (const q of questions) {
     const record = state.quiz[q.id];
-    if (!record) {
-      due.push({ q, box: 1 }); // never seen — treat like a box-1 item, eager to include
-      continue;
-    }
-    const dueAt = record.dueAt ? Date.parse(record.dueAt) : 0;
-    if (dueAt <= now) {
-      due.push({ q, box: record.box ?? 1 });
-    }
+    if (isDue(record, now)) due.push({ q, box: record?.box ?? 1 });
   }
   return due;
 }
@@ -245,8 +307,7 @@ export function computeDueCount(state: ProgressState, questions: { id: string }[
   const now = Date.now();
   let count = 0;
   for (const q of questions) {
-    const record = state.quiz[q.id];
-    if (!record || (record.dueAt ? Date.parse(record.dueAt) : 0) <= now) count += 1;
+    if (isDue(state.quiz[q.id], now)) count += 1;
   }
   return count;
 }

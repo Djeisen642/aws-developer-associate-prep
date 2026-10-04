@@ -18,6 +18,7 @@ npm install
 npm run dev       # start the dev server
 npm run build     # type-check with `astro check` and build the static site to dist/
 npm run preview   # preview the production build locally
+npm test           # run the vitest suite (question-bank invariants, streak/date logic, persistence)
 ```
 
 ## Deployment
