@@ -1,12 +1,12 @@
 # AWS Developer Associate Prep
 
-A fun, fast way to study for the **AWS Certified Developer – Associate (DVA-C02)** exam — built with [Astro](https://astro.build) + React islands and Tailwind CSS.
+Practice questions, flashcards, and cheat sheets for the **AWS Certified Developer – Associate (DVA-C02)** exam, built with [Astro](https://astro.build) + React islands and Tailwind CSS.
 
 ## Features
 
 - **Quiz Mode** — scored, multiple-choice questions across all four exam domains, with instant explanations after every answer.
 - **Flashcards** — flip cards for fast recall of services, comparisons, and common gotchas.
-- **Cheat Sheets** — bite-sized reference pages for the AWS services that show up most on the exam.
+- **Cheat Sheets** — quick-reference pages for the core AWS services covered on the exam.
 - **Progress tracking** — quiz accuracy, flashcard mastery, and a day streak, all tracked locally in your browser via `localStorage`. Nothing is sent to a server.
 
 ## Development

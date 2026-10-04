@@ -154,21 +154,21 @@ export default function Quiz({ questions, domains }: Props) {
             domains, while ones you know well fade into the background.
           </p>
           <p className="mt-3 text-sm font-semibold text-[var(--color-aws-orange)]">
-            {dueCount > 0 ? `${dueCount} question${dueCount === 1 ? '' : 's'} due right now` : "You're all caught up"}
+            {dueCount > 0 ? `${dueCount} question${dueCount === 1 ? '' : 's'} due right now` : 'No questions due'}
           </p>
           <button
             onClick={startSmart}
             disabled={dueCount === 0}
             className="btn-primary mt-4 w-full py-3 text-base disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {dueCount > 0 ? `Start Smart Review (${Math.min(dueCount, SMART_BATCH_SIZE)}) 🧠` : 'Nothing due — nice! ✅'}
+            {dueCount > 0 ? `Start Smart Review (${Math.min(dueCount, SMART_BATCH_SIZE)})` : 'Nothing due'}
           </button>
         </div>
 
         <div className="card pop-in mt-6 p-6 sm:p-8">
           <h2 className="text-xl font-extrabold text-white">Practice by domain</h2>
           <p className="mt-1 text-sm text-slate-300">
-            Pick a domain and length, then go. Some questions ask you to select more than one answer, just like the
+            Choose a domain and a question count. Some questions require selecting more than one answer, as on the
             real exam.
           </p>
 
@@ -227,7 +227,7 @@ export default function Quiz({ questions, domains }: Props) {
             disabled={available.length === 0}
             className="btn-primary mt-6 w-full py-3 text-base disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Start quiz 🚀
+            Start quiz
           </button>
         </div>
       </div>
@@ -237,17 +237,15 @@ export default function Quiz({ questions, domains }: Props) {
   // --- Results screen -------------------------------------------------
   if (index >= deck.length) {
     const pct = Math.round((score / deck.length) * 100);
-    const verdict = pct >= 90 ? '🏆 Cert-ready!' : pct >= 70 ? '💪 Solid work' : pct >= 50 ? '📚 Keep grinding' : '🔁 Review time';
     return (
       <div className="card pop-in mx-auto max-w-xl p-6 text-center sm:p-8">
         <p className="text-sm font-bold uppercase tracking-wide text-[var(--color-aws-orange)]">
-          {smartSession ? '🧠 Review complete' : 'Quiz complete'}
+          {smartSession ? 'Review complete' : 'Quiz complete'}
         </p>
         <p className="mt-2 text-5xl font-black text-white">{pct}%</p>
         <p className="mt-1 text-slate-300">
           {score} / {deck.length} correct
         </p>
-        <p className="mt-4 text-xl font-bold text-white">{verdict}</p>
 
         {smartSession ? (
           <p className="mt-4 text-sm text-slate-400">
@@ -258,14 +256,14 @@ export default function Quiz({ questions, domains }: Props) {
         ) : (
           wrongIds.length > 0 && (
             <p className="mt-4 text-sm text-slate-400">
-              Missed: {wrongIds.length} question{wrongIds.length === 1 ? '' : 's'}. Check the cheat sheets for a refresher.
+              Missed: {wrongIds.length} question{wrongIds.length === 1 ? '' : 's'}.
             </p>
           )
         )}
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <button onClick={playAgain} className="btn-primary px-6 py-2.5">
-            Play again 🔁
+            Play again
           </button>
           <button
             onClick={restart}
@@ -290,7 +288,7 @@ export default function Quiz({ questions, domains }: Props) {
     <div className="pop-in mx-auto max-w-xl" key={question.id}>
       <div className="mb-3 flex items-center justify-between text-sm text-slate-400">
         <span>
-          {smartSession && '🧠 '}Question {index + 1} / {deck.length}
+          Question {index + 1} / {deck.length}
         </span>
         <span className="font-semibold text-[var(--color-aws-orange)]">
           {domainInfo?.icon} {domainInfo?.shortLabel}
@@ -372,7 +370,7 @@ export default function Quiz({ questions, domains }: Props) {
 
         {submitted && (
           <div className="pop-in mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-200">
-            <p className="mb-1 font-bold text-white">{correct ? '✅ Correct!' : '❌ Not quite.'}</p>
+            <p className="mb-1 font-bold text-white">{correct ? 'Correct.' : 'Incorrect.'}</p>
             <p>{question.explanation}</p>
           </div>
         )}
