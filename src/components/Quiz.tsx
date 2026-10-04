@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { QuizQuestion, Domain, DomainInfo } from '../data/types';
 import { recordQuizAnswer, loadProgress, getDueQuestions, computeDueCount, isSmartReviewUrl } from '../utils/progress';
+import { shuffleChoices } from '../utils/quiz';
 
 interface Props {
   questions: QuizQuestion[];
@@ -61,7 +62,7 @@ export default function Quiz({ questions, domains }: Props) {
   }, [deck]);
 
   function launch(pool: QuizQuestion[], isSmart: boolean) {
-    setDeck(pool);
+    setDeck(pool.map((q) => shuffleChoices(q)));
     setSmartSession(isSmart);
     setIndex(0);
     setPicked([]);

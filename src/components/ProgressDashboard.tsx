@@ -7,6 +7,7 @@ import {
   computeDueCount,
   computeReadiness,
   resetProgress,
+  PROGRESS_STORAGE_KEY,
   SMART_REVIEW_QUERY,
   type ProgressState,
   type DomainStats,
@@ -48,6 +49,15 @@ export default function ProgressDashboard({ domains, questions, totalFlashcards 
   useEffect(() => {
     setState(loadProgress());
     setNotifState(getNotificationState());
+  }, []);
+
+  // Pick up quiz/flashcard progress made in another tab. The browser doesn't fire this for same-tab writes.
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key === PROGRESS_STORAGE_KEY || event.key === null) setState(loadProgress());
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   // If the user already granted permission, nudge them with a real OS notification
